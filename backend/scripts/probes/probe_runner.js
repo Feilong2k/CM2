@@ -1,10 +1,21 @@
-require('dotenv').config({ path: '../../.env' });
-const DS_ReasonerAdapter = require('../../src/adapters/DS_ReasonerAdapter');
+const path = require('path');
+const dotenv = require('dotenv');
+
+// Load .env from the backend directory (one level up from this file's directory)
+const envPath = path.resolve(__dirname, '../../.env');
+console.log('Loading .env from:', envPath);
+dotenv.config({ path: envPath });
+
 const ToolRunner = require('../../tools/ToolRunner');
-const registry = require('../../tools/registry');
+const FileSystemTool = require('../../tools/FileSystemTool');
+
+// Build a minimal tool registry for FileSystemTool
+const toolRegistry = {
+  FileSystemTool: FileSystemTool.tools
+};
 
 /**
- * Run a DeepSeek Capability Probe.
+ * Run a DeepSeek Capability Probe using direct API call.
  * @param {string} probeName - Name of the probe
  * @param {string} systemPrompt - System instruction
  * @param {Array} tools - List of tool definition objects (from functionDefinitions)
@@ -16,23 +27,19 @@ const registry = require('../../tools/registry');
 async function runProbe(probeName, systemPrompt, tools, userMessage, options = {}) {
   console.log(`\n\n=== START PROBE: ${probeName} ===\n`);
   
+  // Debug: log environment variables and .env loading
+  console.log('Current working directory:', process.cwd());
+  console.log('DEEPSEEK_API_KEY exists?', 'DEEPSEEK_API_KEY' in process.env);
+  console.log('DEEPSEEK_API_KEY value:', process.env.DEEPSEEK_API_KEY ? '***' + process.env.DEEPSEEK_API_KEY.slice(-4) : 'undefined');
+  
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     console.error('Error: DEEPSEEK_API_KEY not found in .env');
     return;
   }
 
-  // Configure adapter with deepseek-reasoner model (supports reasoning_content)
-  // Use the dedicated DS_ReasonerAdapter so behavior matches the
-  // production adapter wiring while preserving the probe's semantics.
-  const adapter = new DS_ReasonerAdapter({ 
-    apiKey,
-    model: 'deepseek-reasoner', // explicit, though this is the default
-  });
-  // registry.getTools() returns the map { FileSystemTool: ..., DatabaseTool: ... }
-  // If options.toolRegistry is provided, use it; otherwise use default Orion tools
-  const toolRegistry = options.toolRegistry || registry.getTools();
   const maxTurns = options.maxTurns || 10;
+  const useToolRegistry = options.toolRegistry || toolRegistry;
   
   const messages = [
     { role: 'system', content: systemPrompt },
@@ -48,20 +55,34 @@ async function runProbe(probeName, systemPrompt, tools, userMessage, options = {
     console.log(`--- Turn ${turn} ---`);
 
     try {
-      // We use non-streaming for simplicity in the probe, unless streaming is strictly required
-      // But the adapter supports streaming. Let's use non-streaming for the probe log readability.
-      const response = await adapter.sendMessages(messages, {
-        tools: tools,
-        temperature: 0.0 // Deterministic for probing
+      // Direct DeepSeek API call
+      const response = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'deepseek-reasoner',
+          messages: messages,
+          tools: tools.length > 0 ? tools : undefined,
+          temperature: 0.0,
+          stream: false
+        })
       });
 
-      const { content, toolCalls, reasoningContent } = response;
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`DeepSeek API error: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      const choice = data.choices[0];
+      const { content, tool_calls, reasoning_content } = choice.message;
 
       // Log Reasoning (Think Block)
-      if (reasoningContent) {
-        console.log(`[DeepSeek Reasoning]:\n${reasoningContent}\n`);
-        // Note: Reasoning content is not typically sent back in message history for next turn
-        // but we log it for the probe.
+      if (reasoning_content) {
+        console.log(`[DeepSeek Reasoning]:\n${reasoning_content}\n`);
       }
 
       // Log AI response
@@ -69,26 +90,25 @@ async function runProbe(probeName, systemPrompt, tools, userMessage, options = {
         console.log(`[DeepSeek Content]:\n${content}\n`);
       }
 
-      // Construct a single assistant message with all components
-      // DeepSeek Reasoner requires reasoning_content to be present if tool_calls are present
+      // Construct assistant message
       const assistantMsg = { role: 'assistant' };
       if (content) assistantMsg.content = content;
-      if (toolCalls && toolCalls.length > 0) assistantMsg.tool_calls = toolCalls;
-      if (reasoningContent) assistantMsg.reasoning_content = reasoningContent;
+      if (tool_calls && tool_calls.length > 0) assistantMsg.tool_calls = tool_calls;
+      if (reasoning_content) assistantMsg.reasoning_content = reasoning_content;
       
       messages.push(assistantMsg);
 
       // Handle tool calls
-      if (toolCalls && toolCalls.length > 0) {
-        console.log(`[DeepSeek Tool Calls]: ${toolCalls.length} calls`);
+      if (tool_calls && tool_calls.length > 0) {
+        console.log(`[DeepSeek Tool Calls]: ${tool_calls.length} calls`);
 
-        for (const call of toolCalls) {
+        for (const call of tool_calls) {
           console.log(`  > Calling ${call.function.name}(${call.function.arguments})`);
           
           try {
             // Execute tool
             const results = await ToolRunner.executeToolCalls(
-              toolRegistry, 
+              useToolRegistry, 
               [call], 
               { projectId: 'PROBE', requestId: `probe-${Date.now()}` }
             );
@@ -116,17 +136,13 @@ async function runProbe(probeName, systemPrompt, tools, userMessage, options = {
           }
         }
       } else {
-        // No tool calls - checking if we are done
-        // In "tool thinking" mode, usually the final content comes AFTER tools.
-        // If we got content but no tools, we might be done or just chatting.
-        // We'll let the loop continue if the model wants to say more? 
-        // Actually, if no tool calls, it's usually the final answer in this pattern.
+        // No tool calls - assume completion
         console.log('--- No tool calls, assuming sequence complete ---');
         break;
       }
 
     } catch (err) {
-      console.error('Adapter Error:', err);
+      console.error('API Error:', err);
       break;
     }
   }

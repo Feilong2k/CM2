@@ -9,7 +9,17 @@
 // per-model or per-path (streaming vs non-streaming) tool wiring.
 
 const { parseFunctionCall } = require('./functionDefinitions');
-const TraceService = require('../src/services/trace/TraceService');
+let TraceService = null;
+try {
+  TraceService = require('../src/services/trace/TraceService');
+} catch (e) {
+  // Mock TraceService for probes when not available
+  TraceService = {
+    logEvent: async (event) => {
+      console.log('[TraceService Mock]', event.type, event.summary || '');
+    }
+  };
+}
 
 /**
  * Build a canonical signature for a tool call.

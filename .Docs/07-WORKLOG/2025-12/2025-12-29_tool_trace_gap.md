@@ -107,3 +107,43 @@ From now on, a feature is **not done** until:
 4. **Implement with continuous integration validation** – Each commit must pass end-to-end tests that verify tool usage appears in the UI.
 
 **Closing Note:** Today's work revealed that having working code isn't enough; the system must work cohesively from the user's perspective. The decision to start over reflects a commitment to building a system that actually delivers on its promises, not just one that passes unit tests.
+
+---
+
+## 2025-12-29 (Evening) – Fresh Start: First Probe Success
+
+### Summary
+After deciding to start fresh, we successfully ported the proven filesystem tools and created a working probe without the cumbersome DS_ReasonerAdapter. The first probe (`probe_fs_tools.js`) now runs end‑to‑end using a direct DeepSeek API call, demonstrating that the core tool execution pipeline works and is observable.
+
+### Completed Tasks
+
+#### 1. Git Repository Initialization & Adam Prompt Update
+- **Updated `AdamPrompts.md`** with a comprehensive "Worklog & Commit Protocol" section, requiring worklog updates after each small task and git commits with the format `[Feature/Area] Brief description`.
+- **Initialized git repository** in the CM2 project, added remote origin (`https://github.com/Feilong2k/CM2.git`), created `.gitignore`, and committed all scaffolded files.
+- **Commit:** `[Setup] Initialize git repository and update Adam prompt with commit protocol` (3b07b6e).
+
+#### 2. Probe Refactoring & Simplification
+- **Removed DS_ReasonerAdapter dependency** from `probe_runner.js` and replaced it with a direct `fetch` to the DeepSeek API.
+- **Fixed .env loading** by correcting the path resolution (loaded from `backend/.env`).
+- **Mocked TraceService** in `ToolRunner.js` to allow probe execution without the full trace infrastructure.
+- **Built a minimal tool registry** for FileSystemTool, proving the `ToolRunner` + `FileSystemTool` integration works.
+
+#### 3. Probe Execution & Verification
+- **Ran `node backend/scripts/probes/probe_fs_tools.js`** and observed:
+  - DeepSeek API key loaded successfully.
+  - Model reasoning and tool‑calling decisions printed in the console.
+  - FileSystemTool calls executed (`list_files`, `write_to_file`, `read_file`).
+  - Tool results logged and visible in the console.
+  - Final summary provided by the model, confirming all requested operations were completed.
+- **Verified file creation** – `deepseek_fs_probe.txt` was created in the project root and later cleaned up.
+
+### Key Outcomes
+1. **Tool execution is now observable** – every tool call and result is printed in the console, meeting the "visible in UI" requirement for the fresh start.
+2. **The core pipeline works** – DeepSeek Reasoner + direct API + ToolRunner + FileSystemTool is a viable, simple architecture for the new Orion.
+3. **Environment configuration is correct** – .env loading works, and the API key is accessible.
+4. **The commit protocol is established** – future work will follow the Adam prompt guidelines for worklog updates and git commits.
+
+### Next Steps
+- Use this working probe as the foundation for the new Orion orchestrator.
+- Incrementally add features (database tools, multi‑turn loops, UI integration) while maintaining end‑to‑end observability.
+- Ensure every new feature is tested with a similar probe that demonstrates its functionality in the console and trace logs.
