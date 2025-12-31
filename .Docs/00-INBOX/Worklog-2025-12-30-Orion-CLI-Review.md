@@ -87,12 +87,12 @@ During earlier analysis, I made several assumptions that the user corrected:
    - The user wants to use the prompt **as defined in `OrionAgent.js`**, not a custom one in the CLI. So that assumption was wrong for your use case.
 
 3. **Speculated about `probe_fs_tools.js` behavior without validating**  
-   - I inferred it might use a different prompt or wiring, without re‑reading the file in this session (the parallel tool call for it got blocked).
-   - That’s a speculative leap; I should have either inspected it properly or explicitly labelled it as an unverified hypothesis.
+   - I inferred it might use a different prompt or wiring, without re‑reading the file in this session.  
+   - That was a speculative leap; I should have either inspected it properly or explicitly labelled it as an unverified hypothesis.
 
-4. **Implied that prompt changes alone would reliably stop tool calls**  
-   - I suggested stronger instructions would likely reduce spurious tool calls, which is generally true directionally, but I spoke too confidently given we’re working against an LLM’s learned behavior and you’re seeing it ignore constraints.
-   - That should have been framed more cautiously as: “this *may* help, but the model can still ignore it.”
+4. **Implied prompt changes alone would reliably stop tool calls**  
+   - I suggested stronger instructions would likely reduce spurious tool calls.  
+   - Should have framed this more cautiously: “this *may* help, but the model can still ignore it.”
 
 ---
 
@@ -283,3 +283,29 @@ Adam: [Provided the Devon implementation prompt for the new OrionAgent conversat
 - Create `probe_ds_adapter.js` (Test) for `DS_ReasonerAdapter` (Implementation).
 - Create Devon prompt for `DS_ReasonerAdapter`.
 - Git commit the clean slate.
+
+## 8. Probe-First Rebuild Execution (2025-12-31)
+
+### Phase 1.1 Step 1: DS_ReasonerAdapter
+- **Created Probe:** `backend/scripts/probes/probe_ds_adapter.js`.
+- **Created Implementation:** `backend/src/adapters/DS_ReasonerAdapter.js` (using native fetch, streaming, SSE parsing).
+- **Verified:** Ran the probe. It successfully connected to DeepSeek and streamed chunks ("Hi").
+- **Status:** **DONE**.
+
+### Phase 1.1 Step 2: ToolOrchestrator
+- **Created Probe:** `backend/scripts/probes/probe_fs_tools_orchestrator.js`.
+  - Simulates a multi-step task ("Create a file... then read it back").
+  - Mocks the "Brain" using the new Adapter.
+- **Created Implementation:** `backend/src/orchestration/ToolOrchestrator.js`.
+  - Implements the loop (maxTurns).
+  - Handles streaming response aggregation.
+  - Merges split tool call chunks.
+  - Executes tools via `ToolRunner`.
+- **Verified:** Ran the probe.
+  - Trace output confirmed successful tool execution (write then read).
+  - Model provided a final answer confirming the file content.
+- **Status:** **DONE**.
+
+We now have a working Adapter and a working Orchestrator, both verified by dedicated probes.
+
+**Next:** Implement `OrionAgent.js`.
