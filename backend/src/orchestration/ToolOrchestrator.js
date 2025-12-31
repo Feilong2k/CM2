@@ -21,9 +21,6 @@ class ToolOrchestrator {
         this.traceEmitter = options.traceEmitter || ((event) => console.log('[Trace]', event.type, event.summary || ''));
         this.projectId = options.projectId || null;
         this.requestId = options.requestId || crypto.randomUUID();
-        
-        // Internal state
-        this.currentTurn = 0;
     }
 
     /**
@@ -37,13 +34,16 @@ class ToolOrchestrator {
         let aggregatedContent = '';
         let aggregatedToolCalls = [];
         let shouldContinue = true;
+        let currentTurn = 0;
+        this.currentTurn = currentTurn;
 
-        while (shouldContinue && this.currentTurn < this.maxTurns) {
-            this.currentTurn++;
+        while (shouldContinue && currentTurn < this.maxTurns) {
+            currentTurn++;
+            this.currentTurn = currentTurn;
             
             // Emit turn start trace
             this._emitTrace('turn_start', {
-                turn: this.currentTurn,
+                turn: currentTurn,
                 messages: currentMessages.length
             });
 
@@ -266,12 +266,87 @@ class ToolOrchestrator {
                 content: aggregatedContent
             });
 
-            yield {
-                type: 'max_turns',
-                content: aggregatedContent,
-                tool_calls: aggregatedToolCalls,
-                turns: this.currentTurn
+            // Inject prompt message for final answer
+            const finalPrompt = {
+                role: 'system',
+                content: 'You have reached the maximum number of turns. Provide a comprehensive summary or answer based on the information you have gathered so far. Do not call any more tools. Focus on summarizing what you have learned for the user.'
             };
+
+            // Append final prompt to messages
+            const finalMessages = [...currentMessages, finalPrompt];
+
+            this._emitTrace('max_turns_prompt_injected', {
+                turns: this.currentTurn,
+                prompt: finalPrompt.content
+            });
+
+            // Make one additional LLM call for final answer (streaming)
+            // Use empty tools list to discourage further tool calls
+            try {
+                const finalChunks = [];
+                for await (const chunk of this.adapter.callStreaming(finalMessages, [], { temperature: 0.7, max_tokens: 2000 })) {
+                    const chunkContent = chunk.content || '';
+                    finalChunks.push(chunkContent);
+                    // Yield chunk events for streaming
+                    yield {
+                        type: 'chunk',
+                        content: chunkContent,
+                        reasoning_content: chunk.reasoning_content || '',
+                        tool_calls: chunk.tool_calls || []
+                    };
+                    // Emit trace for each chunk if it has content (for debugging)
+                    if (chunkContent.trim()) {
+                        this._emitTrace('final_chunk', {
+                            turn: this.currentTurn,
+                            length: chunkContent.length
+                        });
+                    }
+                }
+                const finalContent = finalChunks.join('');
+
+                this._emitTrace('llm_call', {
+                    turn: this.currentTurn,
+                    content_length: finalContent.length,
+                    final: true
+                });
+
+                if (finalContent.trim()) {
+                    yield {
+                        type: 'final',
+                        content: finalContent,
+                        tool_calls: [],
+                        turns: this.currentTurn
+                    };
+                } else {
+                    // If final content is empty, fall back to aggregated content
+                    this._emitTrace('final_empty', {
+                        turn: this.currentTurn
+                    });
+                    yield {
+                        type: 'final',
+                        content: aggregatedContent || 'I have gathered information but cannot generate a final summary. Please ask a more specific question.',
+                        tool_calls: aggregatedToolCalls,
+                        turns: this.currentTurn
+                    };
+                }
+            } catch (error) {
+                this._emitTrace('error', {
+                    turns: this.currentTurn,
+                    error: error.message
+                });
+
+                // Yield final event with aggregated content despite error
+                yield {
+                    type: 'final',
+                    content: aggregatedContent,
+                    tool_calls: aggregatedToolCalls,
+                    turns: this.currentTurn,
+                    error: error.message
+                };
+            }
+
+            // End loop
+            shouldContinue = false;
         }
     }
 

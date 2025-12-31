@@ -10,18 +10,18 @@ These are the “known-good” building blocks you should carry into the new cod
 ### 1.1 DeepSeek + tools probes
 - [] `backend/scripts/deepseek_tool_probe.js`  
   - Direct DeepSeek API call + tools; we know this path works.
-- []`backend/scripts/probes/probe_db_tools.js`
+- [X]`backend/scripts/probes/probe_db_tools.js`
 - [x]`backend/scripts/probes/probe_fs_tools.js`
 - [x]`backend/scripts/probes/probe_runner.js` (for orchestration patterns if useful).
 
 ### 1.2 Database layer
 - DB config + migrations:
-  - `backend/config/db.js`
+  - [x]`backend/config/db.js`
   - `backend/migrations/` (at least those that define projects/features/tasks/subtasks, chat_messages, trace_events).
 - Tools:
-  - `backend/tools/DatabaseTool.js`
-  - `backend/tools/ActivityLogTool.js`
-  - `backend/tools/DatabaseToolAgentAdapter.js`
+  - [x]`backend/tools/DatabaseTool.js`
+  - [x]`backend/tools/ActivityLogTool.js`
+  - [x]`backend/tools/DatabaseToolAgentAdapter.js`
 
 ### 1.3 Filesystem & search tools
 - [x]`backend/tools/FileSystemTool.js`

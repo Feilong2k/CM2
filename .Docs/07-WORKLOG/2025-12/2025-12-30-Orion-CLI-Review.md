@@ -173,5 +173,78 @@ Adam: [Provided the Devon implementation prompt for the new OrionAgent conversat
 - **Verified:** Probe confirmed CLI instantiation and input handling logic.
 - **Status:** **DONE**.
 
+**Root Cause Analysis & Bug Fix (2025-12-31):**
+
+The original issue (CLI crashing on "Hi" with "path is required" error) was **not** fixed by the prompt change alone. During detailed debugging, we discovered a critical bug in `ToolOrchestrator._mergeToolCalls`:
+
+1. **Bug:** When the LLM streams tool calls across multiple chunks, the `_mergeToolCalls` method concatenated the `function.arguments` strings incorrectly, resulting in malformed JSON like `{{"path":"."}}` (double braces).
+
+2. **Consequences:**
+   - `ToolRunner` attempted to parse this invalid JSON with `JSON.parse`, which threw a syntax error.
+   - The error was caught and re‑thrown as "Tool execution failed: path is required" (because the parsed arguments object was empty).
+   - The orchestrator's retry loop repeated the same broken call, leading to the CLI appearing to hang and eventually exit.
+
+3. **Fix:** Updated `_mergeToolCalls` to properly merge arguments:
+   - Ensure `existing.function.arguments` is initialized as an empty string if missing.
+   - Concatenate new arguments only when they are strings.
+   - Added defensive validation to prevent double‑brace corruption.
+
+4. **Additional Debugging Improvements:**
+   - Added logging of the **raw arguments string** in `ToolRunner` catch blocks, making similar bugs immediately visible.
+   - Fixed the `this.currentTurn` reference bug (local variable vs. class property) that caused trace events to show `turn: undefined`.
+
+__The Faulty Code (Reconstructed):__
+
+```javascript
+// backend/src/orchestration/ToolOrchestrator.js (OLD / BUGGY)
+_mergeToolCalls(existingCalls, newCalls) {
+    const merged = [...existingCalls];
+    for (const newCall of newCalls) {
+        // ... matching logic ...
+        if (newCall.function) {
+            // ...
+            if (newCall.function.arguments) {
+                // BUG: Defaulted to stringified empty object "{}" instead of empty string ""
+                const existingArgs = existing.function.arguments || '{}'; 
+                existing.function.arguments = existingArgs + newCall.function.arguments;
+            }
+        }
+    }
+    return merged;
+}
+```
+
+__The Fix (Current Code):__
+
+```javascript
+// backend/src/orchestration/ToolOrchestrator.js (FIXED)
+_mergeToolCalls(existingCalls, newCalls) {
+    // ...
+    if (newCall.function.arguments) {
+        // FIX: Default to empty string
+        const existingArgs = existing.function.arguments || ''; 
+        existing.function.arguments = existingArgs + newCall.function.arguments;
+    }
+    // ...
+}
+```
+
+__The Max Turns Bug:__
+
+```javascript
+// OLD (Class Property - never resets)
+constructor() { this.currentTurn = 0; }
+async *run() {
+    while (this.currentTurn < this.maxTurns) { this.currentTurn++; ... }
+}
+
+// FIXED (Local Variable - resets per run)
+async *run() {
+    let currentTurn = 0;
+    while (currentTurn < this.maxTurns) { currentTurn++; ... }
+}
+```
+
+
 **Conclusion:**
-We have successfully rebuilt the entire backend stack (Adapter -> Orchestrator -> Agent -> CLI) using strict TDD/Probe-First methodology. The original issue (crashing on "Hi") is resolved, and we have a suite of probes validating each layer.
+We have successfully rebuilt the entire backend stack (Adapter -> Orchestrator -> Agent -> CLI) using strict TDD/Probe‑First methodology. The original issue (crashing on "Hi") is resolved by fixing the JSON‑merging bug in `ToolOrchestrator`, and we have a suite of probes validating each layer.

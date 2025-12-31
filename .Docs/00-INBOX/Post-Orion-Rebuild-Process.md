@@ -26,10 +26,11 @@ To enable Orion to delegate subtasks to **TaraAider** (testing) and **DevonAider
   - Columns: `id`, `project_id`, `feature_id`, `step_number`, `step_type` (`implementation`|`test`), `file_path`, `instructions`, `status` (`pending`|`in_progress`|`completed`|`failed`), `assigned_to` (`TaraAider`|`DevonAider`), `context_snapshot` (JSON), `created_at`, `updated_at`.
 - **`work_stages` table** (optional) – tracks overall progress of a feature (analysis, decomposition, implementation, testing, integration).
 - Updates to existing `projects`, `features`, `tasks`, `subtasks` tables to reference steps.
+NOTE: steps is tied to subtask only not feature or task, it is the breakdown of subtask to signle file step.
 
 ### 2.2 Helper Services
 
-- **`StepDecomposer`** – a helper that uses Orion (via its existing toolset) to break a feature/task into single‑file steps. It writes each step to the `steps` table.
+- **`StepDecomposer`** – a helper that uses Orion (via its existing toolset) to break a subtask into single‑file steps. It writes each step to the `steps` table.
 - **`ContextBuilder`** – for each step, builds a rich context that includes:
   - The file’s current content (read via FileSystemTool).
   - Relevant parts of the codebase (e.g., imports, related components).
@@ -47,6 +48,8 @@ To enable Orion to delegate subtasks to **TaraAider** (testing) and **DevonAider
   - Runs tests (`npm test` or `jest`) and captures output (pass/fail, errors).
   - Appends test results to conversation history.
   - Detects stuckness (repeated failures, no progress) and escalates to Orion.
+NOTE: we need a script that runs the test/command and feed the progress details and results to Tara for her to act on.
+
 
 ### 2.3 Skill Definition (Anthropic‑style)
 

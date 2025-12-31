@@ -387,6 +387,48 @@ const functionDefinitions = [
   {
     type: 'function',
     function: {
+      name: 'DatabaseTool_delete_task',
+      description: 'Delete a task by ID. This will cascade to subtasks. Use with caution.',
+      parameters: {
+        type: 'object',
+        properties: {
+          task_id: {
+            type: 'string',
+            description: 'Task ID: numeric id, full external_id, or shorthand.'
+          },
+          reason: {
+            type: 'string',
+            description: 'Reason for deletion (for logging).'
+          }
+        },
+        required: ['task_id']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'DatabaseTool_delete_feature',
+      description: 'Delete a feature by ID. This will cascade to tasks and subtasks. Use with caution.',
+      parameters: {
+        type: 'object',
+        properties: {
+          feature_id: {
+            type: 'string',
+            description: 'Feature ID: numeric id, full external_id, or shorthand.'
+          },
+          reason: {
+            type: 'string',
+            description: 'Reason for deletion (for logging).'
+          }
+        },
+        required: ['feature_id']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
       name: 'DatabaseTool_safe_query',
       description: 'Execute a safe SQL query (subject to safety checks). Backed by DatabaseTool.query().',
       parameters: {

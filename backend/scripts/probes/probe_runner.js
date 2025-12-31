@@ -8,10 +8,12 @@ dotenv.config({ path: envPath });
 
 const ToolRunner = require('../../tools/ToolRunner');
 const FileSystemTool = require('../../tools/FileSystemTool');
+const DatabaseToolAgentAdapter = require('../../tools/DatabaseToolAgentAdapter');
 
 // Build a minimal tool registry for FileSystemTool
 const toolRegistry = {
-  FileSystemTool: FileSystemTool.tools
+  FileSystemTool: FileSystemTool.tools,
+  DatabaseTool: DatabaseToolAgentAdapter
 };
 
 /**
