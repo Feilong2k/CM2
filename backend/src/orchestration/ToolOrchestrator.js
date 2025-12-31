@@ -134,6 +134,7 @@ class ToolOrchestrator {
                         tool: parsedToolCall.tool,
                         action: parsedToolCall.action,
                         params: parsedToolCall.params,
+                        rawArguments: toolCall.function?.arguments, // Capture raw args for debugging
                         toolCallId: toolCall.id
                     };
                     yield toolCallEvent;
