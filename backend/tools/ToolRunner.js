@@ -168,14 +168,6 @@ async function executeToolCall(tools, toolCall, context) {
   }
 }
 
-// In-memory maps for basic deduplication and rate limiting. These are process-
-// local and reset on server restart, which is sufficient for MVP.
-const recentToolCalls = new Map(); // key -> number[] of timestamps (ms)
-const cachedToolResults = new Map(); // key -> { timestamp, resultSummary }
-
-// Per-request duplicate tracking (enhanced soft stop)
-const perRequestDuplicateTracker = new Map(); // requestId -> { signatures, blockedSignatures }
-
 function safePreview(value, maxLen = 1200) {
   // In test environment, don't truncate to allow JSON parsing.
   if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
@@ -227,24 +219,11 @@ async function logToolTraceEvent({ projectId, requestId, type, toolName, summary
   }
 }
 
-function getRequestTracker(requestId) {
-  if (!perRequestDuplicateTracker.has(requestId)) {
-    perRequestDuplicateTracker.set(requestId, {
-      signatures: new Map(), // signature -> { timestamp, resultSummary, fullResult }
-      blockedSignatures: new Set(), // signatures temporarily blocked
-      createdAt: Date.now(),
-    });
-  }
-  return perRequestDuplicateTracker.get(requestId);
-}
-
-function cleanupOldTrackers() {
-  const oneHourAgo = Date.now() - 60 * 60 * 1000;
-  for (const [requestId, tracker] of perRequestDuplicateTracker.entries()) {
-    if (tracker.createdAt < oneHourAgo) {
-      perRequestDuplicateTracker.delete(requestId);
-    }
-  }
+function isDeterministicNonRetryable(err) {
+  const msg = (err && err.message) ? String(err.message) : '';
+  if (/not found/i.test(msg)) return true;
+  if (/MISSING_PROJECT_CONTEXT/i.test(msg)) return true;
+  return false;
 }
 
 /**
@@ -256,60 +235,15 @@ function cleanupOldTrackers() {
  * @param {Object} context - Shared context passed through to tools
  * @returns {Promise<Array>} Array of { toolCallId, toolName, result|error, success, attempts, timestamp }
  */
-function getSoftStopWindowMs() {
-  // In test environment, disable soft‑stop window to avoid blocking consecutive calls in tests.
-  if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
-    return 0;
-  }
-  const raw = process.env.TOOL_SOFTSTOP_WINDOW_MS;
-  const parsed = raw ? parseInt(raw, 10) : NaN;
-  if (!Number.isFinite(parsed) || parsed <= 0) return 60_000;
-  return parsed;
-}
-
 async function executeToolCalls(tools, toolCalls, context) {
-  // In test environment, clear global caches to ensure test isolation.
-  if (process.env.NODE_ENV === 'test') {
-    recentToolCalls.clear();
-    cachedToolResults.clear();
-    perRequestDuplicateTracker.clear();
-  }
-
   if (!Array.isArray(toolCalls) || toolCalls.length === 0) {
     return [];
   }
 
   const results = [];
-
   const maxAttempts = 3;
 
-  // Legacy rate limiting/dedup window.
-  const rateWindowMs = 10_000; // 10 seconds
-  const rateLimitCount = 3; // max 3 real executions per window
-
-  // Enhanced soft-stop window: block identical calls within a single requestId for this long.
-  // NOTE: In streaming, a single user turn can easily take 20-60s; keep this large enough
-  // to prevent Orion from spamming the same tool call within one turn.
-  // Can be overridden via env var TOOL_SOFTSTOP_WINDOW_MS.
-  const softStopWindowMs = getSoftStopWindowMs();
-
-    const requestId = context?.requestId || 'default';
-    const projectId = context?.projectId || null;
-    const turnIndex = context?.turnIndex;
-
-    const tracker = getRequestTracker(requestId);
-    const { signatures, blockedSignatures } = tracker;
-
-  function isDeterministicNonRetryable(err) {
-    const msg = (err && err.message) ? String(err.message) : '';
-    if (/not found/i.test(msg)) return true;
-    if (/MISSING_PROJECT_CONTEXT/i.test(msg)) return true;
-    return false;
-  }
-
   for (const toolCall of toolCalls) {
-    const now = Date.now();
-
     let toolNameLabel = 'unknown';
     let parsed = null;
     let canonicalSignature = null;
@@ -318,13 +252,16 @@ async function executeToolCalls(tools, toolCalls, context) {
       parsed = parseFunctionCall(toolCall);
       const { tool, action, params = {} } = parsed;
       toolNameLabel = action ? `${tool}.${action}` : tool;
-      canonicalSignature = buildCanonicalSignature(tool, action, params, projectId);
+      canonicalSignature = buildCanonicalSignature(tool, action, params, context?.projectId || null);
     } catch (e) {
       // leave toolNameLabel as unknown
     }
 
+    const projectId = context?.projectId || null;
+    const requestId = context?.requestId || 'default';
+    const turnIndex = context?.turnIndex;
+
     // Emit a centralized TOOL_CALL trace event as early as possible.
-    // Even blocked/early-return cases should have a TOOL_CALL + TOOL_RESULT in trace.
     await logToolTraceEvent({
       projectId,
       requestId,
@@ -338,248 +275,9 @@ async function executeToolCalls(tools, toolCalls, context) {
         params: parsed ? (parsed.params || {}) : {},
         args: parsed ? (parsed.params || {}) : {},
         canonicalSignature,
-        softStopWindowMs,
       },
       turnIndex,
     });
-
-    // Enhanced soft stop: canonical signature per request
-    if (parsed && canonicalSignature) {
-
-      // If the signature is currently blocked, enforce within the softStopWindowMs.
-      if (blockedSignatures.has(canonicalSignature)) {
-        const cached = signatures.get(canonicalSignature);
-        if (cached && (now - cached.timestamp) > softStopWindowMs) {
-          // Cooldown elapsed: unblock and allow execution.
-          blockedSignatures.delete(canonicalSignature);
-        } else {
-          // Still blocked: return DUPLICATE_BLOCKED.
-          try {
-            await TraceService.logEvent({
-              projectId,
-              type: 'duplicate_tool_call',
-              source: 'system',
-              timestamp: new Date().toISOString(),
-              summary: `Duplicate tool call blocked (repeated): ${toolNameLabel}`,
-              details: {
-                toolName: toolNameLabel,
-                signature: canonicalSignature,
-                duplicate: true,
-                requestId,
-                blocked: true,
-                reason: 'signature_previously_blocked',
-                previous_timestamp: cached ? cached.timestamp : null,
-                softStopWindowMs,
-              },
-              requestId,
-            });
-          } catch (err) {
-            // best effort
-          }
-
-          const blocked = {
-            toolCallId: toolCall.id || null,
-            toolName: toolNameLabel,
-            success: false,
-            error: 'DUPLICATE_BLOCKED',
-            details: {
-              message: `Duplicate blocked (cooldown ${softStopWindowMs}ms). Use previous results or wait for cooldown.`,
-              previous_timestamp: cached ? new Date(cached.timestamp).toISOString() : null,
-              previous_summary: cached ? cached.resultSummary : null,
-              signature: canonicalSignature,
-              softStopWindowMs,
-            },
-            attempts: 0,
-            timestamp: new Date().toISOString(),
-          };
-
-          await logToolTraceEvent({
-            projectId,
-            requestId,
-            type: 'tool_result',
-            toolName: toolNameLabel,
-            summary: `Tool blocked: ${toolNameLabel}`,
-            details: {
-              toolName: parsed ? parsed.tool : 'unknown',
-              function: parsed ? parsed.action : 'unknown',
-              success: false,
-              error: blocked.error,
-              toolCallId: blocked.toolCallId,
-              attempts: blocked.attempts,
-              blocked: true,
-              reason: 'duplicate_blocked',
-              details: blocked.details,
-              args: parsed ? (parsed.params || {}) : {},
-            },
-            error: { message: blocked.error, code: 'DUPLICATE_BLOCKED' },
-            turnIndex,
-          });
-
-          results.push(blocked);
-          continue;
-        }
-      }
-
-      // If we have a recent execution for this signature, block within window.
-      if (signatures.has(canonicalSignature)) {
-        const cached = signatures.get(canonicalSignature);
-        if (cached && (now - cached.timestamp) <= softStopWindowMs) {
-          blockedSignatures.add(canonicalSignature);
-
-          try {
-            await TraceService.logEvent({
-              projectId,
-              type: 'duplicate_tool_call',
-              source: 'system',
-              timestamp: new Date().toISOString(),
-              summary: `Duplicate tool call blocked: ${toolNameLabel}`,
-              details: {
-                toolName: toolNameLabel,
-                signature: canonicalSignature,
-                duplicate: true,
-                requestId,
-                blocked: true,
-                reason: 'signature_seen_recently_in_request',
-                previous_timestamp: cached ? cached.timestamp : null,
-                softStopWindowMs,
-              },
-              requestId,
-            });
-          } catch (err) {
-            // best effort
-          }
-
-          const blocked = {
-            toolCallId: toolCall.id || null,
-            toolName: toolNameLabel,
-            success: false,
-            error: 'DUPLICATE_BLOCKED',
-            details: {
-              message: `Duplicate tool call blocked (cooldown ${softStopWindowMs}ms). Use previous results or wait for cooldown.`,
-              previous_timestamp: cached ? new Date(cached.timestamp).toISOString() : null,
-              previous_summary: cached ? cached.resultSummary || null : null,
-              signature: canonicalSignature,
-              softStopWindowMs,
-            },
-            attempts: 0,
-            timestamp: new Date().toISOString(),
-          };
-
-          await logToolTraceEvent({
-            projectId,
-            requestId,
-            type: 'tool_result',
-            toolName: toolNameLabel,
-            summary: `Tool blocked: ${toolNameLabel}`,
-            details: {
-              success: false,
-              error: blocked.error,
-              toolCallId: blocked.toolCallId,
-              attempts: blocked.attempts,
-              blocked: true,
-              reason: 'duplicate_seen_recently',
-              details: blocked.details,
-              args: parsed ? (parsed.params || {}) : {},
-            },
-            error: { message: blocked.error, code: 'DUPLICATE_BLOCKED' },
-            turnIndex,
-          });
-
-          results.push(blocked);
-          continue;
-        }
-
-        // Cooldown elapsed: treat as fresh and allow execution.
-        blockedSignatures.delete(canonicalSignature);
-      }
-    }
-
-    // Legacy rate limiting: coarse key for spam prevention
-    const params = parsed ? parsed.params || {} : {};
-    const rateKey = `${toolNameLabel}|${JSON.stringify({ params, projectId })}`;
-
-    const list = recentToolCalls.get(rateKey) || [];
-    const freshList = list.filter((ts) => now - ts <= rateWindowMs);
-
-    if (freshList.length >= rateLimitCount) {
-      const limited = {
-        toolCallId: toolCall.id || null,
-        toolName: toolNameLabel,
-        success: false,
-        error: 'TOOL_CALL_TOO_FREQUENT',
-        details: {
-          message: `You called ${toolNameLabel} too frequently. Please process existing results first.`,
-          cooldown_seconds: Math.ceil((rateWindowMs - (now - freshList[0])) / 1000),
-        },
-        attempts: 0,
-        timestamp: new Date().toISOString(),
-      };
-
-      await logToolTraceEvent({
-        projectId,
-        requestId,
-        type: 'tool_result',
-        toolName: toolNameLabel,
-        summary: `Tool blocked: ${toolNameLabel}`,
-        details: {
-          success: false,
-          error: limited.error,
-          toolCallId: limited.toolCallId,
-          attempts: limited.attempts,
-          blocked: true,
-          reason: 'rate_limited',
-          details: limited.details,
-          args: parsed ? (parsed.params || {}) : {},
-        },
-        error: { message: limited.error, code: 'TOOL_CALL_TOO_FREQUENT' },
-        turnIndex,
-      });
-
-      results.push(limited);
-      continue;
-    }
-
-    // Legacy deduplication (warning/reuse) within rateWindowMs
-    const cachedLegacy = cachedToolResults.get(rateKey);
-    if (cachedLegacy && now - cachedLegacy.timestamp <= rateWindowMs) {
-      const reused = {
-        toolCallId: toolCall.id || null,
-        toolName: toolNameLabel,
-        success: true,
-        result: {
-          warning: 'DUPLICATE_TOOL_CALL',
-          message: 'You already called this tool with these parameters. Reusing previous result.',
-          previous_timestamp: new Date(cachedLegacy.timestamp).toISOString(),
-          previous_summary: cachedLegacy.resultSummary || null,
-        },
-        attempts: 0,
-        timestamp: new Date().toISOString(),
-      };
-
-      await logToolTraceEvent({
-        projectId,
-        requestId,
-        type: 'tool_result',
-        toolName: toolNameLabel,
-        summary: `Tool result (reused): ${toolNameLabel}`,
-        details: {
-          success: true,
-          reused: true,
-          toolCallId: reused.toolCallId,
-          attempts: reused.attempts,
-          result_preview: safePreview(reused.result),
-          args: parsed ? (parsed.params || {}) : {},
-        },
-        turnIndex,
-      });
-
-      results.push(reused);
-      continue;
-    }
-
-    // Record this attempt for rate tracking before actual execution.
-    freshList.push(now);
-    recentToolCalls.set(rateKey, freshList);
 
     let attempts = 0;
     let success = false;
@@ -604,8 +302,6 @@ async function executeToolCalls(tools, toolCalls, context) {
     const execDurationMs = Math.max(0, Date.now() - execStart);
 
     if (success) {
-      cachedToolResults.set(rateKey, { timestamp: now, resultSummary: finalResult });
-
       await logToolTraceEvent({
         projectId,
         requestId,
@@ -621,18 +317,9 @@ async function executeToolCalls(tools, toolCalls, context) {
           duration_ms: execDurationMs,
           result_preview: safePreview(finalResult),
           args: parsed ? (parsed.params || {}) : {},
-          softStopWindowMs,
         },
         turnIndex,
       });
-
-      if (canonicalSignature) {
-        signatures.set(canonicalSignature, {
-          timestamp: now,
-          resultSummary: finalResult,
-          fullResult: finalResult,
-        });
-      }
 
       results.push({
         toolCallId: toolCall.id || null,
@@ -661,7 +348,6 @@ async function executeToolCalls(tools, toolCalls, context) {
           error: errMsg,
           result_preview: safePreview({ error: errMsg }),
           args: parsed ? (parsed.params || {}) : {},
-          softStopWindowMs,
         },
         error: { message: errMsg, code: 'TOOL_EXECUTION_FAILED' },
         turnIndex,
@@ -678,10 +364,6 @@ async function executeToolCalls(tools, toolCalls, context) {
     }
   }
 
-  if (Math.random() < 0.01) {
-    cleanupOldTrackers();
-  }
-
   return results;
 }
 
@@ -689,7 +371,4 @@ module.exports = {
   executeToolCall,
   executeToolCalls,
   buildCanonicalSignature,
-  getRequestTracker,
-  getSoftStopWindowMs,
-  perRequestDuplicateTracker,
 };

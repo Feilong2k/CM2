@@ -6,9 +6,9 @@ const readline = require('readline');
 const OrionAgent = require('../backend/src/agents/OrionAgent');
 const fileSystemTool = require('../backend/tools/FileSystemTool');
 const DatabaseToolAgentAdapter = require('../backend/tools/DatabaseToolAgentAdapter');
-const HistoryLoaderService = require('../backend/src/services/HistoryLoaderService');
 const MessageStoreService = require('../backend/src/services/MessageStoreService');
 const TraceStoreService = require('../backend/src/services/TraceStoreService');
+const ContextService = require('../backend/src/services/ContextService');
 
 class Interface {
   constructor(inputStream = process.stdin, outputStream = process.stdout, options = {}) {
@@ -17,7 +17,6 @@ class Interface {
     this.agent = null;
     this.readlineInterface = null;
     this.projectId = options.projectId || null;
-    this.historyService = options.historyService || new HistoryLoaderService();
     this.messageStoreService = options.messageStoreService || new MessageStoreService();
     this.traceStoreService = options.traceStoreService || new TraceStoreService();
   }
@@ -26,12 +25,18 @@ class Interface {
     // Load environment variables from backend/.env
     dotenv.config({ path: path.resolve(__dirname, '../backend/.env') });
 
-    // Instantiate OrionAgent with both FileSystemTool and DatabaseTool
+    // Create ContextService (requires projectId for history loading)
+    const contextService = new ContextService();
+
+    // Instantiate OrionAgent with both FileSystemTool and DatabaseTool, and context integration
     this.agent = new OrionAgent({
       toolRegistry: { 
         FileSystemTool: fileSystemTool,
         DatabaseTool: DatabaseToolAgentAdapter
       },
+      contextService,
+      projectId: this.projectId,
+      rootPath: process.cwd(),
       orchestratorOptions: {
         traceEmitter: (event) => {
           const summary = event.summary || '';
@@ -51,7 +56,7 @@ class Interface {
 
     this.outputStream.write('Welcome to Orion CLI! Type your commands or "exit" to quit.\n');
     if (this.projectId) {
-      this.outputStream.write(`Project ID: ${this.projectId} (history loaded)\n`);
+      this.outputStream.write(`Project ID: ${this.projectId} (context loaded)\n`);
     }
     this.readlineInterface.prompt();
 
@@ -71,10 +76,9 @@ class Interface {
             metadata: null
           });
 
-          // Build messages array with history if projectId is set
-          const messages = await this._buildMessages(input);
+          // Process the task with streaming, letting the agent handle context
           let finalContent = '';
-          for await (const event of this.agent.processMessagesStreaming(messages)) {
+          for await (const event of this.agent.processTaskStreaming(input)) {
             if (event.type === 'chunk') {
               // Write the chunk content directly to output
               this.outputStream.write(event.content || '');
@@ -114,47 +118,6 @@ class Interface {
     this.readlineInterface.on('close', () => {
       this.outputStream.write('CLI session ended.\n');
     });
-  }
-
-  /**
-   * Build messages array with history if projectId is set
-   * @param {string} userMessage - Current user message
-   * @returns {Promise<Array>} Messages array for the agent
-   */
-  async _buildMessages(userMessage) {
-    const messages = [];
-    
-    // Add system prompt (from agent)
-    messages.push({ role: 'system', content: this.agent.systemPrompt });
-    
-    // Load history if projectId is provided
-    if (this.projectId) {
-      try {
-        const history = await this.historyService.loadRecentChatHistory({
-          projectId: this.projectId,
-          limit: 20
-        });
-        
-        // Map history rows to message objects
-        history.forEach(row => {
-          // Skip tool messages (sender 'tool' or 'system'?) - only 'user' and 'orion'?
-          // The spec says no tool messages loaded into history.
-          // We'll load only 'user' and 'orion' (assistant) messages.
-          // The sender column contains 'user', 'orion', 'system'
-          // We'll map 'orion' to 'assistant' role.
-          const role = row.sender === 'orion' ? 'assistant' : row.sender;
-          messages.push({ role, content: row.content });
-        });
-      } catch (error) {
-        // Fail-loud: rethrow the error
-        throw error;
-      }
-    }
-    
-    // Add current user message
-    messages.push({ role: 'user', content: userMessage });
-    
-    return messages;
   }
 }
 
@@ -200,16 +163,19 @@ async function runNonInteractive(command, projectId) {
   dotenv.config({ path: path.resolve(__dirname, '../backend/.env') });
 
   // Instantiate services
-  const historyService = new HistoryLoaderService();
   const messageStoreService = new MessageStoreService();
   const traceStoreService = new TraceStoreService();
+  const contextService = new ContextService();
 
-  // Instantiate OrionAgent with both FileSystemTool and DatabaseTool
+  // Instantiate OrionAgent with both FileSystemTool and DatabaseTool, and context integration
   const agent = new OrionAgent({
     toolRegistry: { 
       FileSystemTool: fileSystemTool,
       DatabaseTool: DatabaseToolAgentAdapter
     },
+    contextService,
+    projectId,
+    rootPath: process.cwd(),
     orchestratorOptions: {
       traceEmitter: (event) => {
         const summary = event.summary || '';
@@ -220,29 +186,6 @@ async function runNonInteractive(command, projectId) {
     }
   });
 
-  // Load history
-  const messages = [];
-  
-  // Add system prompt
-  messages.push({ role: 'system', content: agent.systemPrompt });
-  
-  try {
-    const history = await historyService.loadRecentChatHistory({
-      projectId,
-      limit: 20
-    });
-    
-    history.forEach(row => {
-      const role = row.sender === 'orion' ? 'assistant' : row.sender;
-      messages.push({ role, content: row.content });
-    });
-  } catch (error) {
-    // Fail-loud: propagate error
-    process.stderr.write(`[ERROR] Failed to load history: ${error.message}\n`);
-    process.exit(1);
-    return; // Prevent further execution in test environment when exit is mocked
-  }
-  
   // Persist user message
   try {
     await messageStoreService.insertMessage({
@@ -257,13 +200,10 @@ async function runNonInteractive(command, projectId) {
     return;
   }
 
-  // Add current user message to messages
-  messages.push({ role: 'user', content: command });
-
-  // Process the messages
+  // Process the task with streaming, letting the agent handle context
   let finalContent = '';
   try {
-    for await (const event of agent.processMessagesStreaming(messages)) {
+    for await (const event of agent.processTaskStreaming(command)) {
       if (event.type === 'chunk') {
         process.stdout.write(event.content || '');
       } else if (event.type === 'final') {

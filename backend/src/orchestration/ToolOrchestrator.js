@@ -19,7 +19,7 @@ class ToolOrchestrator {
     constructor(adapter, toolRegistry, options = {}) {
         this.adapter = adapter;
         this.toolRegistry = toolRegistry;
-        this.maxTurns = options.maxTurns || 10;
+        this.maxTurns = options.maxTurns || 50;
         this.traceEmitter = options.traceEmitter || ((event) => console.log('[Trace]', event.type, event.summary || ''));
         this.projectId = options.projectId || null;
         this.requestId = options.requestId || crypto.randomUUID();

@@ -68,6 +68,12 @@ const originalCreateTask =
     ? DatabaseToolInstance.create_task.bind(DatabaseToolInstance)
     : null;
 
+const originalUpdateTaskSections =
+  DatabaseToolInstance &&
+  typeof DatabaseToolInstance.update_task_sections === "function"
+    ? DatabaseToolInstance.update_task_sections.bind(DatabaseToolInstance)
+    : null;
+
 const DatabaseToolAgentAdapter = {
   // === get_feature_overview ===
   async get_feature_overview(args) {
@@ -535,6 +541,23 @@ const DatabaseToolAgentAdapter = {
       throw new Error("Implementation not available");
 
     return await targetFn(featureId, changes, reason || "");
+  },
+
+  // === update_task_sections ===
+  async update_task_sections(args) {
+    if (!args || typeof args !== "object")
+      throw new Error("args must be an object");
+    const { task_id: taskId, changes, reason, context } = args;
+    if (!taskId) throw new Error("task_id is required");
+    if (!changes) throw new Error("changes is required");
+
+    const targetFn =
+      originalUpdateTaskSections ||
+      (DatabaseToolInstance && DatabaseToolInstance.update_task_sections);
+    if (typeof targetFn !== "function")
+      throw new Error("Implementation not available");
+
+    return await targetFn(taskId, changes, reason || "");
   },
 
   // === update_subtask_sections ===

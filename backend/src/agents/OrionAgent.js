@@ -21,6 +21,11 @@ class OrionAgent {
         this.toolRegistry = options.toolRegistry;
         this.systemPrompt = options.systemPrompt || this._getDefaultSystemPrompt();
         
+        // Context integration
+        this.contextService = options.contextService || null;
+        this.projectId = options.projectId || null;
+        this.rootPath = options.rootPath || process.cwd();
+        
         // Initialize components
         this.adapter = new DS_ReasonerAdapter();
         this.orchestrator = new ToolOrchestrator(
@@ -49,19 +54,45 @@ Guidelines:
     }
 
     /**
+     * Build the final message list, using context if available.
+     * @param {Array} messages - Original messages (should contain the current user message, may also contain system/assistant messages)
+     * @returns {Promise<Array>} Final message list
+     * @private
+     */
+    async _buildFinalMessages(messages) {
+        // If we have a projectId and contextService, use dynamic context
+        if (this.projectId && this.contextService) {
+            const { systemPrompt, historyMessages } = await this.contextService.buildContext(this.projectId, this.rootPath);
+            // The last message in the input array is assumed to be the current user message
+            const currentUserMessage = messages[messages.length - 1];
+            // Ensure the current user message is from the user (role 'user')
+            if (currentUserMessage.role !== 'user') {
+                throw new Error('Expected the last message to be from the user');
+            }
+            // Combine: system prompt, history, current user message
+            return [
+                { role: 'system', content: systemPrompt },
+                ...historyMessages,
+                currentUserMessage
+            ];
+        } else {
+            // Fallback: use default system prompt and no history.
+            // Prepend the default system prompt, assuming messages does not already contain a system message.
+            return [
+                { role: 'system', content: this.systemPrompt },
+                ...messages
+            ];
+        }
+    }
+
+    /**
      * Process a task message with streaming response
      * @param {string} message - User message
      * @returns {AsyncIterator} Stream of events
      */
     async *processTaskStreaming(message) {
-        // Construct messages
-        const messages = [
-            { role: 'system', content: this.systemPrompt },
-            { role: 'user', content: message }
-        ];
-
-        // Delegate to processMessagesStreaming
-        yield* this.processMessagesStreaming(messages);
+        // Delegate to processMessagesStreaming with the user message
+        yield* this.processMessagesStreaming([{ role: 'user', content: message }]);
     }
 
     /**
@@ -70,10 +101,10 @@ Guidelines:
      * @returns {AsyncIterator} Stream of events
      */
     async *processMessagesStreaming(messages) {
+        // Build final messages (with context if applicable)
+        const finalMessages = await this._buildFinalMessages(messages);
+
         // Filter tools based on registry
-        // We match functionDefinitions names (e.g. 'FileSystemTool_read_file')
-        // against the keys in toolRegistry (e.g. 'FileSystemTool').
-        // Assumption: functionDefinitions uses 'ToolName_Action' format.
         const registeredToolNames = Object.keys(this.toolRegistry);
         const tools = functionDefinitions.filter(def => {
             const toolName = def.function.name.split('_')[0];
@@ -81,7 +112,7 @@ Guidelines:
         });
 
         // Delegate to orchestrator
-        yield* this.orchestrator.run(messages, tools);
+        yield* this.orchestrator.run(finalMessages, tools);
     }
 
     /**

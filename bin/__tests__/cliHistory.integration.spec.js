@@ -8,6 +8,13 @@ jest.mock('../../backend/src/services/HistoryLoaderService', () => {
   }));
 });
 
+// Mock the ContextService
+jest.mock('../../backend/src/services/ContextService', () => {
+  return jest.fn().mockImplementation(() => ({
+    buildContext: jest.fn(),
+  }));
+});
+
 // Mock the OrionAgent to capture messages and control responses
 jest.mock('../../backend/src/agents/OrionAgent', () => {
   return jest.fn().mockImplementation(() => ({
@@ -92,7 +99,7 @@ describe('CLI with Persistent History (Integration) – Required Project‑ID', 
       const projectId = 'P1';
       const userMessage = 'What is the status?';
 
-      // Seed the database with 25 messages for P1, 5 for P2
+      // Seed the database with 25 messages for P1 (not used because we mock ContextService, but keep for completeness)
       const inserts = [];
       for (let i = 1; i <= 25; i++) {
         inserts.push(
@@ -111,20 +118,31 @@ describe('CLI with Persistent History (Integration) – Required Project‑ID', 
       }
       await Promise.all(inserts);
 
-      // Mock HistoryLoaderService to return the 20 most recent messages for P1
-      const mockHistory = [];
+      // Build mock history messages as they would be returned by ContextService (with role mapping)
+      const mockHistoryMessages = [];
       for (let i = 6; i <= 25; i++) {
-        mockHistory.push({
-          external_id: projectId,
-          sender: i % 2 === 0 ? 'user' : 'orion',
+        const sender = i % 2 === 0 ? 'user' : 'orion';
+        const role = sender === 'orion' ? 'assistant' : sender;
+        mockHistoryMessages.push({
+          role,
           content: `History message ${i}`,
-          metadata: JSON.stringify({ seq: i }),
-          created_at: new Date(Date.now() - i * 1000).toISOString(),
         });
       }
-      HistoryLoaderService.mockImplementation(() => ({
-        loadRecentChatHistory: jest.fn().mockResolvedValue(mockHistory),
-      }));
+
+      // Mock ContextService to return the expected context
+      const ContextService = require('../../backend/src/services/ContextService');
+      const mockContextServiceInstance = {
+        buildContext: jest.fn().mockResolvedValue({
+          systemPrompt: 'Test system prompt',
+          historyMessages: mockHistoryMessages,
+          contextData: {
+            file_tree: '',
+            history_summary: '',
+            project_state: 'Active',
+          },
+        }),
+      };
+      ContextService.mockImplementation(() => mockContextServiceInstance);
 
       // Capture the messages passed to OrionAgent.processMessagesStreaming
       let capturedMessages = [];
@@ -134,6 +152,17 @@ describe('CLI with Persistent History (Integration) – Required Project‑ID', 
             capturedMessages = messages;
             yield { type: 'chunk', content: `Messages count: ${messages.length}` };
             yield { type: 'final', content: 'Done' };
+          }),
+          processTaskStreaming: jest.fn(async function* (input) {
+            // Simulate the real agent's behavior: use the mocked ContextService to build messages
+            const { systemPrompt, historyMessages } = await mockContextServiceInstance.buildContext(projectId, expect.any(String));
+            const messages = [
+              { role: 'system', content: systemPrompt },
+              ...historyMessages,
+              { role: 'user', content: input }
+            ];
+            // Delegate to processMessagesStreaming
+            yield* mockAgent.processMessagesStreaming(messages);
           }),
           systemPrompt: 'Test system prompt',
         };
@@ -161,12 +190,11 @@ describe('CLI with Persistent History (Integration) – Required Project‑ID', 
         process.stdout.write = originalStdout;
       }
 
-      // Verify HistoryLoaderService was called with correct arguments
-      const historyServiceInstance = HistoryLoaderService.mock.results[0].value;
-      expect(historyServiceInstance.loadRecentChatHistory).toHaveBeenCalledWith({
+      // Verify ContextService was called with correct arguments
+      expect(mockContextServiceInstance.buildContext).toHaveBeenCalledWith(
         projectId,
-        limit: 20,
-      });
+        expect.any(String) // rootPath
+      );
 
       // Verify the captured messages array
       expect(capturedMessages).toHaveLength(22); // 1 system + 20 history + 1 user
@@ -197,6 +225,10 @@ describe('CLI with Persistent History (Integration) – Required Project‑ID', 
           processMessagesStreaming: jest.fn(async function* (messages) {
             yield { type: 'chunk', content: 'Thinking...' };
             yield { type: 'final', content: orionAnswer };
+          }),
+          processTaskStreaming: jest.fn(async function* (input) {
+            // Delegate to processMessagesStreaming with the user message
+            yield* mockAgent.processMessagesStreaming([{ role: 'user', content: input }]);
           }),
           systemPrompt: 'Test system prompt',
         };
