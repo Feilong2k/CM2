@@ -13,6 +13,8 @@ class ToolOrchestrator {
      * @param {Function} options.traceEmitter - Function to emit trace events (default: console.log)
      * @param {string} options.projectId - Project ID for tracing
      * @param {string} options.requestId - Request ID for tracing (auto-generated if not provided)
+     * @param {Object} options.traceStoreService - Service for persisting trace events (required for persistence)
+     * @param {Object} options.messageStoreService - Service for persisting chat messages (optional)
      */
     constructor(adapter, toolRegistry, options = {}) {
         this.adapter = adapter;
@@ -21,6 +23,8 @@ class ToolOrchestrator {
         this.traceEmitter = options.traceEmitter || ((event) => console.log('[Trace]', event.type, event.summary || ''));
         this.projectId = options.projectId || null;
         this.requestId = options.requestId || crypto.randomUUID();
+        this.traceStoreService = options.traceStoreService || null;
+        this.messageStoreService = options.messageStoreService || null;
     }
 
     /**
@@ -42,7 +46,7 @@ class ToolOrchestrator {
             this.currentTurn = currentTurn;
             
             // Emit turn start trace
-            this._emitTrace('turn_start', {
+            await this._emitTrace('turn_start', {
                 turn: currentTurn,
                 messages: currentMessages.length
             });
@@ -81,7 +85,7 @@ class ToolOrchestrator {
                 }
 
                 // Emit LLM call trace
-                this._emitTrace('llm_call', {
+                await this._emitTrace('llm_call', {
                     turn: this.currentTurn,
                     content: turnContent,
                     tool_calls: turnToolCalls,
@@ -102,7 +106,7 @@ class ToolOrchestrator {
                     };
                     
                     // Emit final trace
-                    this._emitTrace('turn_end', {
+                    await this._emitTrace('turn_end', {
                         turn: this.currentTurn,
                         reason: 'no_tool_calls',
                         final_content: aggregatedContent
@@ -139,6 +143,15 @@ class ToolOrchestrator {
                     };
                     yield toolCallEvent;
 
+                    // Emit tool call trace
+                    await this._emitTrace('tool_call', {
+                        turn: this.currentTurn,
+                        tool: parsedToolCall.tool,
+                        action: parsedToolCall.action,
+                        params: parsedToolCall.params,
+                        toolCallId: toolCall.id
+                    });
+
                     // Prepare context for tool execution
                     const context = {
                         projectId: this.projectId,
@@ -171,7 +184,7 @@ class ToolOrchestrator {
                         toolResults.push(toolResultEvent);
 
                         // Emit tool execution trace
-                        this._emitTrace(result.success ? 'tool_success' : 'tool_error', {
+                        await this._emitTrace(result.success ? 'tool_success' : 'tool_error', {
                             turn: this.currentTurn,
                             tool: toolCallEvent.tool,
                             action: toolCallEvent.action,
@@ -194,7 +207,7 @@ class ToolOrchestrator {
                         yield errorEvent;
                         toolResults.push(errorEvent);
 
-                        this._emitTrace('tool_error', {
+                        await this._emitTrace('tool_error', {
                             turn: this.currentTurn,
                             tool: toolCallEvent.tool,
                             action: toolCallEvent.action,
@@ -234,7 +247,7 @@ class ToolOrchestrator {
                 }
 
                 // Emit turn end trace
-                this._emitTrace('turn_end', {
+                await this._emitTrace('turn_end', {
                     turn: this.currentTurn,
                     tool_calls_executed: turnToolCalls.length,
                     tool_results: toolResults.length
@@ -242,7 +255,7 @@ class ToolOrchestrator {
 
             } catch (error) {
                 // Error in LLM call or processing
-                this._emitTrace('error', {
+                await this._emitTrace('error', {
                     turn: this.currentTurn,
                     error: error.message,
                     stack: error.stack
@@ -261,7 +274,7 @@ class ToolOrchestrator {
 
         // If we reached max turns without natural completion
         if (this.currentTurn >= this.maxTurns && shouldContinue) {
-            this._emitTrace('max_turns_reached', {
+            await this._emitTrace('max_turns_reached', {
                 turns: this.currentTurn,
                 content: aggregatedContent
             });
@@ -275,7 +288,7 @@ class ToolOrchestrator {
             // Append final prompt to messages
             const finalMessages = [...currentMessages, finalPrompt];
 
-            this._emitTrace('max_turns_prompt_injected', {
+            await this._emitTrace('max_turns_prompt_injected', {
                 turns: this.currentTurn,
                 prompt: finalPrompt.content
             });
@@ -296,7 +309,7 @@ class ToolOrchestrator {
                     };
                     // Emit trace for each chunk if it has content (for debugging)
                     if (chunkContent.trim()) {
-                        this._emitTrace('final_chunk', {
+                        await this._emitTrace('final_chunk', {
                             turn: this.currentTurn,
                             length: chunkContent.length
                         });
@@ -304,7 +317,7 @@ class ToolOrchestrator {
                 }
                 const finalContent = finalChunks.join('');
 
-                this._emitTrace('llm_call', {
+                await this._emitTrace('llm_call', {
                     turn: this.currentTurn,
                     content_length: finalContent.length,
                     final: true
@@ -319,7 +332,7 @@ class ToolOrchestrator {
                     };
                 } else {
                     // If final content is empty, fall back to aggregated content
-                    this._emitTrace('final_empty', {
+                    await this._emitTrace('final_empty', {
                         turn: this.currentTurn
                     });
                     yield {
@@ -330,7 +343,7 @@ class ToolOrchestrator {
                     };
                 }
             } catch (error) {
-                this._emitTrace('error', {
+                await this._emitTrace('error', {
                     turns: this.currentTurn,
                     error: error.message
                 });
@@ -404,7 +417,7 @@ class ToolOrchestrator {
      * @param {string} type - Event type
      * @param {Object} data - Event data
      */
-    _emitTrace(type, data) {
+    async _emitTrace(type, data) {
         const traceEvent = {
             type,
             timestamp: new Date().toISOString(),
@@ -414,7 +427,149 @@ class ToolOrchestrator {
             ...data
         };
         
+        // Emit via the configured trace emitter (e.g., console.log)
         this.traceEmitter(traceEvent);
+        
+        // Persist to database if traceStoreService is available
+        if (this.traceStoreService) {
+            // Convert internal trace event to storage event format
+            const storageEvent = this._createStorageEvent(type, data);
+            // Fail-loud: let any storage error propagate
+            await this.traceStoreService.insertTraceEvent(storageEvent);
+        }
+    }
+
+    /**
+     * Convert internal trace event to storage event format for TraceStoreService
+     * @param {string} type - Event type (internal)
+     * @param {Object} data - Event data
+     * @returns {Object} Storage event for TraceStoreService.insertTraceEvent
+     */
+    _createStorageEvent(type, data) {
+        // Base event with required fields
+        const baseEvent = {
+            projectId: this.projectId,
+            requestId: this.requestId,
+            type: this._mapTraceTypeToStorageType(type),
+            source: this._determineSource(type, data),
+            summary: this._generateSummary(type, data),
+            details: data,
+            // Optional fields that may be present in data
+            toolName: data.tool || null,
+            direction: this._determineDirection(type, data),
+            phaseIndex: data.phaseIndex || null,
+            cycleIndex: data.cycleIndex || null,
+            error: data.error || null,
+            metadata: data.metadata || null,
+        };
+
+        // Ensure details is an object (default to {})
+        if (!baseEvent.details || typeof baseEvent.details !== 'object') {
+            baseEvent.details = {};
+        }
+
+        return baseEvent;
+    }
+
+    /**
+     * Map internal trace type to storage event type
+     * @param {string} internalType - Internal trace type
+     * @returns {string} Storage event type
+     */
+    _mapTraceTypeToStorageType(internalType) {
+        const typeMap = {
+            'turn_start': 'orchestration_phase_start',
+            'llm_call': 'llm_call',
+            'tool_call': 'tool_call',
+            'tool_success': 'tool_result',
+            'tool_error': 'tool_result',
+            'tool_result': 'tool_result',
+            'turn_end': 'orchestration_phase_end',
+            'error': 'system_error',
+            'max_turns_reached': 'system_event',
+            'max_turns_prompt_injected': 'system_event',
+            'final_chunk': 'llm_call',
+            'final_empty': 'system_event',
+        };
+        return typeMap[internalType] || internalType;
+    }
+
+    /**
+     * Determine source based on event type and data
+     * @param {string} type - Event type
+     * @param {Object} data - Event data
+     * @returns {string} Source identifier
+     */
+    _determineSource(type, data) {
+        if (data.source) return data.source;
+        
+        const sourceMap = {
+            'turn_start': 'system',
+            'llm_call': 'orion',
+            'tool_call': 'orion',
+            'tool_success': 'tool',
+            'tool_error': 'tool',
+            'tool_result': 'tool',
+            'turn_end': 'system',
+            'error': 'system',
+            'max_turns_reached': 'system',
+            'max_turns_prompt_injected': 'system',
+            'final_chunk': 'orion',
+            'final_empty': 'system',
+        };
+        return sourceMap[type] || 'system';
+    }
+
+    /**
+     * Generate human-readable summary
+     * @param {string} type - Event type
+     * @param {Object} data - Event data
+     * @returns {string} Summary text
+     */
+    _generateSummary(type, data) {
+        switch (type) {
+            case 'turn_start':
+                return `Turn ${data.turn} started`;
+            case 'llm_call':
+                return `LLM call for turn ${data.turn}`;
+            case 'tool_call':
+                return `Tool call: ${data.tool}.${data.action}`;
+            case 'tool_success':
+                return `Tool result: ${data.tool}.${data.action} succeeded`;
+            case 'tool_error':
+                return `Tool result: ${data.tool}.${data.action} failed`;
+            case 'turn_end':
+                return `Turn ${data.turn} ended`;
+            case 'error':
+                return `Error: ${data.error || 'Unknown error'}`;
+            case 'max_turns_reached':
+                return `Maximum turns (${this.maxTurns}) reached`;
+            case 'max_turns_prompt_injected':
+                return 'Max turns prompt injected';
+            case 'final_chunk':
+                return 'Final answer chunk';
+            case 'final_empty':
+                return 'Final answer empty, using aggregated content';
+            default:
+                return `${type} event`;
+        }
+    }
+
+    /**
+     * Determine direction based on event type
+     * @param {string} type - Event type
+     * @param {Object} data - Event data
+     * @returns {string|null} Direction (inbound, outbound, internal) or null
+     */
+    _determineDirection(type, data) {
+        if (data.direction) return data.direction;
+        
+        const directionMap = {
+            'tool_call': 'outbound',
+            'tool_result': 'inbound',
+            'llm_call': 'outbound',
+        };
+        return directionMap[type] || null;
     }
 }
 

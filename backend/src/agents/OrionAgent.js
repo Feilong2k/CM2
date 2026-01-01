@@ -60,6 +60,16 @@ Guidelines:
             { role: 'user', content: message }
         ];
 
+        // Delegate to processMessagesStreaming
+        yield* this.processMessagesStreaming(messages);
+    }
+
+    /**
+     * Process a list of messages with streaming response
+     * @param {Array} messages - Array of message objects with role and content
+     * @returns {AsyncIterator} Stream of events
+     */
+    async *processMessagesStreaming(messages) {
         // Filter tools based on registry
         // We match functionDefinitions names (e.g. 'FileSystemTool_read_file')
         // against the keys in toolRegistry (e.g. 'FileSystemTool').
