@@ -91,9 +91,9 @@ class Interface {
               this.outputStream.write('\n');
             } else if (event.type === 'error') {
               // Error from orchestrator (e.g., trace storage failure)
-              // Fail loud: exit the CLI
               this.outputStream.write(`\n[ERROR] ${event.error}\n`);
-              process.exit(1);
+              // Break the loop and continue to next prompt
+              break;
             }
           }
           
@@ -109,7 +109,7 @@ class Interface {
         } catch (err) {
           // Catch any other error (e.g., history loading, message insertion)
           this.outputStream.write(`\n[ERROR] ${err.message}\n`);
-          process.exit(1);
+          // Do not exit, just break the current task and continue to next prompt.
         }
         this.readlineInterface.prompt();
       }

@@ -413,6 +413,33 @@ class ToolOrchestrator {
     }
 
     /**
+     * Recursively sanitize an object for JSON serialization.
+     * Converts undefined to null, functions to strings, and ensures all values are JSON-serializable.
+     */
+    _sanitizeForJSON(obj) {
+        if (obj === undefined || obj === null) {
+            return null;
+        }
+        if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') {
+            return obj;
+        }
+        if (Array.isArray(obj)) {
+            return obj.map(item => this._sanitizeForJSON(item));
+        }
+        if (typeof obj === 'object') {
+            const sanitized = {};
+            for (const key in obj) {
+                if (obj.hasOwnProperty(key)) {
+                    sanitized[key] = this._sanitizeForJSON(obj[key]);
+                }
+            }
+            return sanitized;
+        }
+        // For functions, symbols, etc., convert to string
+        return String(obj);
+    }
+
+    /**
      * Emit trace event
      * @param {string} type - Event type
      * @param {Object} data - Event data
@@ -434,8 +461,12 @@ class ToolOrchestrator {
         if (this.traceStoreService) {
             // Convert internal trace event to storage event format
             const storageEvent = this._createStorageEvent(type, data);
-            // Fail-loud: let any storage error propagate
-            await this.traceStoreService.insertTraceEvent(storageEvent);
+            try {
+                await this.traceStoreService.insertTraceEvent(storageEvent);
+            } catch (error) {
+                // Log the error but don't break the orchestrator
+                console.error('Failed to store trace event:', error);
+            }
         }
     }
 
@@ -446,6 +477,8 @@ class ToolOrchestrator {
      * @returns {Object} Storage event for TraceStoreService.insertTraceEvent
      */
     _createStorageEvent(type, data) {
+        // Sanitize the data for JSON serialization
+        const sanitizedData = this._sanitizeForJSON(data);
         // Base event with required fields
         const baseEvent = {
             projectId: this.projectId,
@@ -453,14 +486,14 @@ class ToolOrchestrator {
             type: this._mapTraceTypeToStorageType(type),
             source: this._determineSource(type, data),
             summary: this._generateSummary(type, data),
-            details: data,
+            details: sanitizedData,
             // Optional fields that may be present in data
             toolName: data.tool || null,
             direction: this._determineDirection(type, data),
             phaseIndex: data.phaseIndex || null,
             cycleIndex: data.cycleIndex || null,
-            error: data.error || null,
-            metadata: data.metadata || null,
+            error: data.error ? this._sanitizeForJSON(data.error) : null,
+            metadata: data.metadata ? this._sanitizeForJSON(data.metadata) : null,
         };
 
         // Ensure details is an object (default to {})

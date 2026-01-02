@@ -561,14 +561,63 @@ function safeParseArgs(str) {
     return {};
   }
 
-  // First, try normal JSON.parse
+  // Helper function to escape control characters inside JSON string literals
+  function escapeControlCharsInJsonStrings(jsonStr) {
+    let result = '';
+    let inString = false;
+    let prevChar = '';
+    for (let i = 0; i < jsonStr.length; i++) {
+      const c = jsonStr[i];
+      if (!inString) {
+        result += c;
+        if (c === '"' && prevChar !== '\\') {
+          inString = true;
+        }
+      } else {
+        // We are inside a string
+        if (c === '\n' && prevChar !== '\\') {
+          result += '\\n';
+        } else if (c === '\r' && prevChar !== '\\') {
+          result += '\\r';
+        } else if (c === '\t' && prevChar !== '\\') {
+          result += '\\t';
+        } else if (c === '"' && prevChar === '\\') {
+          // This is an escaped quote, keep it as is
+          result += c;
+        } else if (c === '\\' && prevChar === '\\') {
+          // Double backslash, reset prevChar so we don't think the next char is escaped
+          result += c;
+          prevChar = ''; // Reset to avoid triple backslash issues
+          continue;
+        } else {
+          result += c;
+        }
+        // Check for end of string
+        if (c === '"' && prevChar !== '\\') {
+          inString = false;
+        }
+      }
+      prevChar = c;
+    }
+    return result;
+  }
+
+  // Attempt 1: Try normal JSON.parse
   try {
     return JSON.parse(trimmed);
   } catch (e) {
-    // Try to repair common malformations
+    // Continue to repair attempts
   }
 
-  // Common pattern 1: Missing braces, e.g., "path":"probe_plan_target.txt"
+  // Attempt 2: Try escaping control characters in string literals
+  try {
+    const escaped = escapeControlCharsInJsonStrings(trimmed);
+    return JSON.parse(escaped);
+  } catch (e) {
+    // Continue to other repair attempts
+  }
+
+  // Attempt 3: Missing braces, e.g., "path":"probe_plan_target.txt"
   // Try to wrap in braces if it looks like a JSON object but without braces
   if (trimmed.startsWith('"') && trimmed.includes(':') && !trimmed.startsWith('{')) {
     try {
@@ -576,31 +625,41 @@ function safeParseArgs(str) {
     } catch (e) {}
   }
 
-  // Common pattern 2: Single-quoted strings, e.g., {'path':'probe_plan_target.txt'}
+  // Attempt 4: Single-quoted strings, e.g., {'path':'probe_plan_target.txt'}
   // Replace single quotes with double quotes
   const singleToDouble = trimmed.replace(/'/g, '"');
   try {
     return JSON.parse(singleToDouble);
   } catch (e) {}
 
-  // Common pattern 3: Unquoted keys, e.g., {path:"probe_plan_target.txt"}
+  // Attempt 5: Unquoted keys, e.g., {path:"probe_plan_target.txt"}
   // This is not valid JSON but might be fixed by quoting keys
   const quotedKeys = trimmed.replace(/([{,]\s*)([a-zA-Z0-9_]+)(\s*:)/g, '$1"$2"$3');
   try {
     return JSON.parse(quotedKeys);
   } catch (e) {}
 
-  // Common pattern 4: Missing quotes around value, e.g., {"path":probe_plan_target.txt}
-  // This is complex; we'll try to wrap unquoted values that are not numbers/booleans/null
-  // This is a simplified attempt: if we see a colon followed by a word without quotes, quote it
-  const fixUnquotedValues = quotedKeys.replace(/:"([^"]*)"/g, (match, p1) => {
-    // If the value is a number, boolean, or null, leave it as is (but it's already quoted)
-    // This is a heuristic; we'll just return the original match
+  // Attempt 6: Missing quotes around value, e.g., {"path":probe_plan_target.txt}
+  // Try to quote unquoted string values (but not numbers, booleans, null)
+  // This regex attempts to find : followed by an unquoted string (letters, digits, underscores, dots, hyphens)
+  // that is not a number, true, false, or null.
+  const fixUnquotedValues = quotedKeys.replace(/:"([^"]*)"/g, (match, inner) => {
+    // If the inner value looks like a number, boolean, or null, leave it quoted
+    if (/^-?\d+(\.\d+)?$/.test(inner) || inner === 'true' || inner === 'false' || inner === 'null') {
+      return match;
+    }
+    // Otherwise, ensure it's quoted (it already is in this match, so return as is)
     return match;
   });
-  // Actually, let's try a different approach: use a more robust parser? 
-  // For now, if all else fails, return an empty object and log the error.
-  console.error('Failed to parse tool arguments after repair attempts:', str);
+  
+  // Additional pass: find colon followed by unquoted value and quote it
+  const finalAttempt = fixUnquotedValues.replace(/:([a-zA-Z_][a-zA-Z0-9_.-]*)(?=\s*[,}])/g, ':"$1"');
+  try {
+    return JSON.parse(finalAttempt);
+  } catch (e) {}
+
+  // If all else fails, log and return empty object
+  console.error('Failed to parse tool arguments after repair attempts:', str.substring(0, 200));
   return {};
 }
 

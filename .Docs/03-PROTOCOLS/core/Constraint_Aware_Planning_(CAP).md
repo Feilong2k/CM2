@@ -73,5 +73,5 @@ The Plan Verification Protocol (PVP) is a systematic approach to validating that
    - Test database migration creates required tables.
 
 ## Related Protocols
-- **CDP (Constraint Discovery Protocol)**: Used in step 3 to systematically identify gaps and constraints.
+- **PCC (Preflight Constraint Check)**: Used in step 3 to systematically identify gaps and constraints.
 - **Tara's Testing Protocol**: Uses the test specifications from step 7 to create comprehensive tests.
