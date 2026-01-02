@@ -26,19 +26,35 @@ Test three key hypotheses about Orion's skill usage with clear experimental sepa
 
 ## MVP Implementation Tasks
 
-### Task 1: Create CAP Skill Documentation
-- [ ] **Create CAP.md** in `.Docs/03-PROTOCOLS/CAP.md` with:
+### Task 1: Define Skill Structure and Create Three Skills
+- [ ] **Create Skill.md template** in `.Docs/03-PROTOCOLS/Skill.md` defining:
+  - Standard skill structure (name, description, decision triggers, steps, examples)
+  - Checklist format requirements
+  - Metadata conventions (version, last updated, dependencies)
+  - Example of a complete skill document
+- [ ] **Create CAP.md** following Skill.md template in `.Docs/03-PROTOCOLS/CAP.md`:
   - Complete 7-step protocol with clear examples
   - Checklist format (Orion's preference)
   - Decision triggers: "Use when: planning any technical implementation"
   - Example application to database migration planning
-- [ ] **Update ContextBuilderService** to:
-  - Parse CAP.md and generate optimized prompt section
-  - Format as checklist with steps 1-7
-  - Verify token impact (<2% increase)
-  - **Conditional inclusion:** Ability to include/exclude CAP section based on test phase
+- [ ] **Create RED.md** following Skill.md template in `.Docs/03-PROTOCOLS/RED.md`:
+  - Requirement Extraction and Decomposition skill
+  - Steps for breaking down requirements into testable components
+  - Decision triggers: "Use when: analyzing ambiguous or complex requirements"
+- [ ] **Create PCC1.md** following Skill.md template in `.Docs/03-PROTOCOLS/PCC1.md`:
+  - Protocol Compliance Checking subskill
+  - Steps for verifying protocol adherence in implementations
+  - Decision triggers: "Use when: reviewing code or designs for protocol compliance"
 
-### Task 2: Implement Database Schema for Three-Test Capture
+### Task 2: Update ContextBuilderService for Skill Management
+- [ ] **Update ContextBuilderService** to:
+  - Parse Skill.md template to understand skill structure
+  - Load specific skill files (CAP.md, RED.md, PCC1.md) and generate optimized prompt sections
+  - Format each skill as checklist with steps
+  - Verify token impact (<5% increase for all three skills)
+  - **Conditional inclusion:** Ability to include/exclude specific skills based on test phase (include only CAP for MVP testing)
+
+### Task 3: Implement Database Schema for Three-Test Capture
 - [ ] **Create migration** for test tables:
   ```sql
   -- Store full test interactions
@@ -79,7 +95,7 @@ Test three key hypotheses about Orion's skill usage with clear experimental sepa
   );
   ```
 
-### Task 3: Build Automated Test Probe
+### Task 4: Build Automated Test Probe
 - [ ] **Create probe_skill_test.js** in `backend/scripts/probes/`:
   - Initializes fresh Orion instance per test phase
   - Runs through 10 subtasks (2-1-2 through 2-1-6, 2-2-1 through 2-2-5)
@@ -95,7 +111,7 @@ Test three key hypotheses about Orion's skill usage with clear experimental sepa
   - Progress reporting and summary statistics
   - Isolation: Each test runs in clean context
 
-### Task 4: Define Three-Phase Test Procedure
+### Task 5: Define Three-Phase Test Procedure
 - [ ] **Test subtasks:** 2-1-2, 2-1-3, 2-1-4, 2-1-5, 2-1-6, 2-2-1, 2-2-2, 2-2-3, 2-2-4, 2-2-5 (10 total)
 - [ ] **Baseline phase prompts** (no skills in memory):
   - `"Review subtask {id}. Provide analysis and Tara prompt without asking clarification questions."`
@@ -110,14 +126,14 @@ Test three key hypotheses about Orion's skill usage with clear experimental sepa
   3. Compliance: All 10 subtasks
   - *Total: 30 test runs*
 
-### Task 5: Create Adam Grading Protocol (Updated for Three Tests)
+### Task 6: Create Adam Grading Protocol (Updated for Three Tests)
 - [ ] **Update AdamGradingPrompt.md** to include:
   - Phase-specific scoring rules (discovery score only for discovery/compliance)
   - Examples for each test phase
   - Statistical comparison guidance
 - [ ] **Integrate with main Adam prompt** to reference three-test grading responsibilities
 
-### Task 6: Execute Probe and Grade Responses
+### Task 7: Execute Probe and Grade Responses
 - [ ] **Run probe:** Execute `node backend/scripts/probes/probe_skill_test.js`
 - [ ] **Monitor execution:** Ensure all 30 tests complete (some may be skipped)
 - [ ] **Invoke Adam** to grade all responses:
@@ -126,7 +142,7 @@ Test three key hypotheses about Orion's skill usage with clear experimental sepa
   - Stores results in `skill_test_grades` with phase identification
 - [ ] **Calibration:** Grade first 2-3 responses of each phase together to ensure consistency
 
-### Task 7: Analyze Results and Generate Final Report
+### Task 8: Analyze Results and Generate Final Report
 - [ ] **Calculate phase metrics:**
   - **Baseline:** Average quality scores (completeness, depth, constraints, actionable)
   - **Discovery:** Spontaneous CAP usage rate, quality scores
