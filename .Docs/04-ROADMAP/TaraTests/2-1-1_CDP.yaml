@@ -1,0 +1,26 @@
+subtask: 2-1-1
+cdp_analysis:
+  atomic_actions:
+    - migration_execution
+    - schema_verification
+    - enum_usability
+  resources_touched:
+    - postgresql_test_instance
+    - migration_file
+  system_physics:
+    - idempotent_migration
+    - database_isolation_required
+test_scenarios:
+  - enum_existence
+  - value_verification
+  - usability
+assumptions:
+  - test_database_is_isolated
+  - migration_sql_is_correct
+  - postgresql_version_supports_if_not_exists
+risks:
+  - database_connection_failure: medium
+  - value_order_mismatch: low
+  - migration_idempotency: low
+questions: []
+blockers: none
