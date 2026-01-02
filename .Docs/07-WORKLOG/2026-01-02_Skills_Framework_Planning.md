@@ -45,6 +45,12 @@ Today's work focused on Task 2-5-1: Skills Framework MVP. We conducted a thoroug
 - **Test procedure** for 5 subtasks (2-1-1 through 2-2-2)
 - **Example prompts** for natural and forced testing phases
 
+### 6. Three-Test Structure Refinement
+- **Enhanced MVP design:** Created Task 2-5-1 Implementation v3 with three-test structure (baseline, discovery, compliance)
+- **Probe-based automation:** Replaced CLI testing with standalone probe for faster, isolated testing
+- **Statistical rigor:** Added baseline phase for controlled comparison, enabling clear efficacy measurement
+- **Updated success criteria:** Refined metrics for discovery (≥40%), compliance (≥80%), efficacy (≥20% improvement)
+
 ## Decisions Made
 
 ### 1. Scope Reduction for MVP
@@ -69,41 +75,43 @@ Today's work focused on Task 2-5-1: Skills Framework MVP. We conducted a thoroug
 ## Files Created/Modified
 
 ### New Files:
-1. `.Docs/04-ROADMAP/Task_2-5-1_Implementation_v2.md` - Complete MVP implementation plan
-2. `.Docs/01-AGENTS/02-Adam/prompts/AdamGradingPrompt.md` - Adam's grading protocol
+1. `.Docs/04-ROADMAP/Task_2-5-1_Implementation_v2.md` - Complete MVP implementation plan (v2)
+2. `.Docs/04-ROADMAP/Task_2-5-1_Implementation_v3.md` - Enhanced three-test probe-based plan (v3)
+3. `.Docs/01-AGENTS/02-Adam/prompts/AdamGradingPrompt.md` - Adam's grading protocol
 
 ### Modified Files:
-1. `.Docs/04-ROADMAP/Task_2-5-1_Implementation.md` - Original plan (now superseded by v2)
+1. `.Docs/04-ROADMAP/Task_2-5-1_Implementation.md` - Original plan (now superseded by v3)
 
 ## Next Steps
 
-### Immediate (Task 2-5-1 Implementation):
+### Immediate (Task 2-5-1 Implementation v3):
 1. Create CAP.md documentation in `.Docs/03-PROTOCOLS/`
-2. Implement database schema migration
-3. Add `--testing` flag to orion-cli.js
-4. Update ContextBuilderService to include CAP skill
-5. Execute 5-subtask test sequence
-6. Invoke Adam for grading and analysis
+2. Implement database schema migration for three-test capture
+3. Build probe_skill_test.js for automated three-phase testing
+4. Update ContextBuilderService with conditional CAP skill inclusion
+5. Execute probe (30 tests across 10 subtasks × 3 phases)
+6. Invoke Adam for grading and statistical analysis
 
 ### Future Considerations:
-- If MVP successful: Expand to RED and PCC skills, implement skill registry
+- If MVP successful: Expand to RED and PCC skills using same three-test framework
 - If mixed results: Add tool-based triggers, refine skill presentation
-- If unsuccessful: Pivot to tool-only approach or reference library
+- If unsuccessful: Pivot to reference library or tool-only approach
 
 ## Time Investment
 - **Analysis & Planning:** 1.5 hours
 - **Documentation Creation:** 1 hour
 - **Review & Refinement:** 0.5 hours
-- **Total:** 3 hours of focused AI work
+- **Three-test enhancement:** 0.5 hours
+- **Total:** 3.5 hours of focused AI work
 
 ## Success Metrics
-- **MVP validation:** Clear go/no-go data on skill adoption
-- **Time savings:** Automated logging saves 11+ hours vs manual approach
-- **Decision quality:** Quantitative metrics for informed architecture decisions
+- **MVP validation:** Clear go/no-go data on skill adoption with statistical rigor
+- **Time savings:** Probe automation saves ~12 hours vs manual approach for 30 tests
+- **Decision quality:** Quantitative metrics with baseline comparison for informed decisions
 
 ## Commit Summary
-This worklog documents the comprehensive planning and design phase for Task 2-5-1. The enhanced MVP plan provides a robust framework for testing the fundamental assumption about Orion's skill usage while respecting time constraints and maintaining technical rigor.
+This worklog documents the comprehensive planning and design phase for Task 2-5-1. The enhanced MVP v3 plan provides a robust framework for testing the fundamental assumption about Orion's skill usage with a three-test probe-based approach, enabling rigorous validation while respecting time constraints.
 
 ---
-*Worklog completed: 2026-01-02 12:30 AM EST*
+*Worklog updated: 2026-01-02 1:00 AM EST*
 *Prepared by: Adam (Architect)*

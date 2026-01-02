@@ -99,6 +99,9 @@ Test three key hypotheses about Orion's skill usage:
   4. Forced test on 2-2-2
   5. Optional: Control test (no skills in prompt) on remaining subtasks
 
+NOTE: This can be a probe, completely automated, rather than having me manually prompting. should I actually use the prompts Orion generate and see how Tara and Devon do? if this is not required, then it could be ran like this, have the probe run through tasks 2-1-2 to 2-1-6 and 2-2-1 to 2-2-6 all using natural languauge one by one, make sure the responses are recorded, these don't get recorded into the actual historical messages. once this is done, we then run through all the subtasks using the forced prompts (skip the clarification question requirements part? or if we can get you talking to Orion directly, you can answer his questions directly.)
+
+
 ### Task 5: Create Adam Grading Protocol
 - [ ] **Create AdamGradingPrompt.md** in `.Docs/01-AGENTS/02-Adam/prompts/`
   - Complete grading instructions and rubrics
