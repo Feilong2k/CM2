@@ -1,6 +1,14 @@
 // DS_ReasonerAdapter - Thin wrapper around DeepSeek API
 // Implements streaming interface for DeepSeek API calls
 
+class ContextLimitError extends Error {
+    constructor(message, details) {
+        super(message);
+        this.name = 'ContextLimitError';
+        this.details = details;
+    }
+}
+
 class DS_ReasonerAdapter {
     constructor() {
         // Read API key from environment
@@ -46,7 +54,31 @@ class DS_ReasonerAdapter {
 
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`DeepSeek API request failed: ${response.status} ${response.statusText} - ${errorText}`);
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch (e) {
+                // Not JSON, use raw text
+                errorData = { error: { message: errorText } };
+            }
+            const status = response.status;
+            const message = errorData?.error?.message || errorText;
+            const code = errorData?.error?.code;
+
+            // Detect context limit error
+            if (
+                status === 400 &&
+                code === 'invalid_request_error' &&
+                message.includes('maximum context length')
+            ) {
+                throw new ContextLimitError(message, {
+                    status,
+                    code,
+                    requestedTokens: extractRequestedTokens(message),
+                });
+            }
+
+            throw new Error(`DeepSeek API request failed: ${status} ${response.statusText} - ${message}`);
         }
 
         // Parse the streaming response
@@ -154,4 +186,10 @@ class DS_ReasonerAdapter {
     }
 }
 
-module.exports = { DS_ReasonerAdapter };
+// Helper to extract requested tokens from error message
+function extractRequestedTokens(message) {
+    const match = message.match(/(\d+)\s*tokens/);
+    return match ? parseInt(match[1], 10) : null;
+}
+
+module.exports = { DS_ReasonerAdapter, ContextLimitError };

@@ -1,7 +1,7 @@
-# CONSTRAINT DISCOVERY PROTOCOL (CDP) - Level 1
+# Preflight Constraint Check (PCC) - Level 1
 
 ## Overview
-The Constraint Discovery Protocol (CDP) is a systematic method for identifying constraints, gaps, and risks in a technical plan. It examines atomic actions, resources touched, and physical constraints to ensure thoroughness in planning. CDP is designed to be used as part of the Plan Verification Protocol (PVP) in step 3 (IDENTIFY GAPS).
+The Preflight Constraint Check (PCC) is a systematic method for identifying constraints, gaps, and risks in a technical plan. It examines atomic actions, resources touched, and physical constraints to ensure thoroughness in planning. PCC is designed to be used as part of the Constraint Aware Planning (CAP) in step 3 (IDENTIFY GAPS).
 
 ## Protocol Format
 
@@ -43,8 +43,8 @@ resource_physics:
 ## Usage Guidelines
 
 - **When to use**:
-  - **Subtasks (Tara/Devon):** Use **CDP Level 1** (Atomic Actions + Resources). Focus on immediate constraints.
-  - **Features/Architecture (Adam):** Use **CDP Level 3** (Full Gap Analysis). Focus on systemic risk.
+  - **Subtasks (Tara/Devon):** Use **PCC Level 1** (Atomic Actions + Resources). Focus on immediate constraints.
+  - **Features/Architecture (Adam):** Use **PCC Level 3** (Full Gap Analysis). Focus on systemic risk.
 - **Focus**: Accuracy and thoroughness. Ignore security considerations unless they are inherent to the resource constraints.
 - **Output**: A clear list of gaps, constraints, and risks that must be addressed in the plan.
 
@@ -108,9 +108,9 @@ resource_physics:
     mitigation: "Database retrieval error handling"
 ```
 
-## How CDP Reveals Gaps
+## How PCC Reveals Gaps
 
-In the example above, CDP reveals a critical gap:
+In the example above, PCC reveals a critical gap:
 - **Action**: `frontend_poll_updates` reads from JSON files.
 - **Resource**: File System (JSON files) for reading.
 - **Constraint**: Different data source than the database used by `database_store_message`.
@@ -119,7 +119,7 @@ In the example above, CDP reveals a critical gap:
 
 ## Integration with PVP
 
-CDP is designed to be used within PVP step 3 (IDENTIFY GAPS). The structured format ensures that:
+PCC is designed to be used within PVP step 3 (IDENTIFY GAPS). The structured format ensures that:
 1. Every action is accounted for.
 2. Every resource is identified.
 3. Every constraint is analyzed.
@@ -134,8 +134,8 @@ CDP is designed to be used within PVP step 3 (IDENTIFY GAPS). The structured for
 
 ## Related Protocols
 
-- **PVP (Plan Verification Protocol)**: Uses CDP in step 3 to identify gaps.
-- **Tara's Testing Protocol**: Can use the constraints and risks identified by CDP to create targeted tests.
+- **PVP (Plan Verification Protocol)**: Uses PCC in step 3 to identify gaps.
+- **Tara's Testing Protocol**: Can use the constraints and risks identified by PCC to create targeted tests.
 
 
 # Constraint Discovery Protocol - Level 2:

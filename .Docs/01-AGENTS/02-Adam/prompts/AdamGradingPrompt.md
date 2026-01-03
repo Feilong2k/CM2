@@ -48,15 +48,44 @@ await DatabaseTool.safe_query(
 
 ## Scoring Rubrics
 
+### Phase Definitions (for this CAP probe)
+
+For this three-phase CAP probe, `skill_test_responses.test_phase` will be one of:
+
+- **baseline**
+  - CAP skill is **not** mentioned in the user prompt.
+  - Skills section is **not** included in the system prompt (`includeSkills: false`).
+  - Purpose: measure Orion’s natural behavior without explicit skills.
+  - **Discovery score:** N/A (do not assign; store as NULL).
+
+- **discovery**
+  - CAP skill is **not** mentioned in the user prompt.
+  - Skills section **is** included in the system prompt (`includeSkills: true`), listing top-level skills (CAP, RED, etc.).
+  - Purpose: test whether Orion spontaneously adopts CAP when skills are visible in context.
+  - **Discovery score:** based on spontaneous CAP adoption (see Discovery Score rubric below).
+
+- **compliance**
+  - CAP skill **is** mentioned explicitly in the user prompt (e.g., "Using the CAP (Constraint-Aware Planning) skill, apply CAP's 7 steps...").
+  - Skills section **is** included in the system prompt (`includeSkills: true`).
+  - Purpose: test whether Orion follows CAP when explicitly instructed.
+  - **Discovery score:** based on compliance vs superficial or non-compliance (see Discovery Score rubric below).
+
+
 ### Discovery Score (-1 to +2)
 Evaluate based on user prompt and Orion's response:
 
+> **Phase mapping:**
+> - Baseline phase: do **not** assign a discovery score (store as NULL).
+> - Discovery phase: CAP is *not* in the prompt; use +2 / 0 / -1 as applicable based on spontaneous CAP usage.
+> - Compliance phase: CAP *is* in the prompt; use +1 / 0 / -1 as applicable based on compliance.
+
 | Score | Condition | Criteria |
 |-------|-----------|----------|
-| **+2** | **Spontaneous Adoption** | CAP skill NOT mentioned in user prompt. Orion applies ≥3 CAP steps (explicitly references or clearly applies step methodology). |
-| **+1** | **Effective Compliance** | CAP skill IS mentioned in user prompt. Orion applies ≥3 CAP steps. |
+| **+2** | **Spontaneous Adoption (Discovery phase)** | CAP skill NOT mentioned in user prompt. Orion applies ≥3 CAP steps (explicitly references or clearly applies step methodology). |
+| **+1** | **Effective Compliance (Compliance phase)** | CAP skill IS mentioned in user prompt. Orion applies ≥3 CAP steps. |
 | **0** | **Superficial Compliance** | CAP skill IS mentioned in user prompt. Orion mentions CAP but applies <3 steps (token compliance without substantive application). |
 | **-1** | **Non-Compliance** | CAP skill IS mentioned in user prompt. Orion ignores CAP entirely (no mention and no application). |
+
 
 ### CAP Step Application Tracking
 **7 steps of CAP:**
@@ -95,7 +124,8 @@ Evaluate based on user prompt and Orion's response:
 - **2 (General):** Some specific actions but missing owners or success criteria
 - **3 (Clear):** Clear actions but missing some owners or success criteria
 - **4 (Specific):** Specific, owned tasks with clear success criteria
-- **5 (Operational):** Specific, owned tasks with clear success criteria, validation methods, and contingency plans
+- **5 (Operational):** Specific, owned tasks with clear success criteria, validation methods, and contingency plans. For this probe, this includes **clear, testable instructions for Tara** (what to test, how to test it, and how to know it passed).
+
 
 #### Constraint Count
 - Quantitative count of specific constraints identified (API limits, dependencies, resource requirements, performance constraints, security considerations, etc.)
@@ -103,6 +133,7 @@ Evaluate based on user prompt and Orion's response:
 - Store as integer in `constraint_count`
 
 ## Grading Workflow
+For this three-phase CAP probe run, you should expect up to **36 responses** total (12 subtasks × 3 phases). For each `subtask_id`, the ideal dataset has one `baseline`, one `discovery`, and one `compliance` response in `skill_test_responses`.
 
 ### Step 1: Retrieve Response
 1. Identify which test response to grade (based on user request)
@@ -116,6 +147,14 @@ Evaluate based on user prompt and Orion's response:
 4. **Identify CAP steps:** Which of the 7 steps are applied (explicitly or implicitly)
 5. **Rate quality scores:** Completeness, depth, actionable output (1-5 each)
 6. **Count constraints:** Quantitative count of specific constraints identified
+
+> **Clarification Handling:**
+> - Each test response includes `response_metadata.has_clarification` (true/false), indicating whether Orion asked clarification questions in that run.
+> - When grading:
+>   - Focus your scores on the **substantive analysis and planning** Orion provides, even if the response also contains questions.
+>   - If clarifications dominate the response and leave the analysis obviously incomplete, reflect that in **Completeness** and **Actionable Output** scores, and briefly note it in `grading_rationale`.
+> - If multiple responses exist for the same `(test_phase, subtask_id)`, always grade the **most recent** one (the system will usually provide this via `ORDER BY created_at DESC LIMIT 1`).
+
 
 ### Step 3: Document Rationale
 For each score, provide brief rationale:
@@ -132,7 +171,9 @@ For each score, provide brief rationale:
 ## Example Grading
 
 ### Sample Response Analysis:
-**User Prompt:** "Review subtask 2-1-1. Ask clarification questions if any and provide me with the prompt for Tara."
+**User Prompt:** "Review subtask 2-1-1. Provide your analysis and provide concrete instructions to Tara on how to design and implement tests for this subtask, including what to verify and key edge cases."
+
+
 
 **Orion Response (excerpt):** "Let me analyze subtask 2-1-1... First, I'll list the concrete actions needed: create ENUM types in PostgreSQL, write migration, update models. Resources touched: database, migration files, model files. I need to check if we have PostgreSQL expertise... Dependencies: must run migration before model updates. Integration: check existing ENUMs for conflicts. Completeness: does this cover all needed types? Tests: verify each ENUM value works in application."
 
@@ -164,6 +205,7 @@ For each score, provide brief rationale:
 
 ## Integration with Main Adam Prompt
 This grading protocol supplements your main responsibilities. When grading, follow these specific instructions. For all other architectural work, follow your main prompt.
+
 
 ---
 *Version 1.0 - For Task 2-5-1 v2: Skills Framework MVP Testing*

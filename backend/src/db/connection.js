@@ -179,34 +179,51 @@ async function runMigrations() {
   const appliedResult = await p.query('SELECT name FROM migrations ORDER BY name;');
   const applied = new Set(appliedResult.rows.map(row => row.name));
 
-  // Read migration files from the migrations directory
-  const fs = require('fs');
-  const path = require('path');
-  const migrationsDir = path.join(__dirname, 'migrations');
-  const files = fs.readdirSync(migrationsDir)
-    .filter(file => file.endsWith('.sql'))
-    .sort();
+    // Read migration files from the migrations directory
+    const fs = require('fs');
+    const path = require('path');
+    const migrationsDir = path.join(__dirname, '../../migrations');
+    const files = fs.readdirSync(migrationsDir)
+      .filter(file => file.endsWith('.sql'))
+      .sort();
 
-  for (const file of files) {
-    if (applied.has(file)) {
-      console.log(`Migration ${file} already applied, skipping.`);
-      continue;
-    }
+    for (const file of files) {
+      if (applied.has(file)) {
+        console.log(`Migration ${file} already applied, skipping.`);
+        continue;
+      }
 
-    console.log(`Running migration ${file}...`);
-    const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
-    await p.query('BEGIN');
-    try {
-      await p.query(sql);
-      await p.query('INSERT INTO migrations (name) VALUES ($1);', [file]);
-      await p.query('COMMIT');
-      console.log(`Migration ${file} applied successfully.`);
-    } catch (error) {
-      await p.query('ROLLBACK');
-      console.error(`Migration ${file} failed:`, error.message);
-      throw error;
+      console.log(`Running migration ${file}...`);
+      let rawSql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+      // Strip BOM if present
+      rawSql = rawSql.replace(/^\uFEFF/, '');
+
+      // Remove psql backslash commands (like \restrict, \unrestrict) that are not valid SQL.
+      // These commands start with a backslash and are only valid in psql, not in PQexec.
+      const sql = rawSql.split('\n')
+        .filter(line => !line.trim().startsWith('\\'))
+        .join('\n');
+      
+      if (sql.includes('\0')) {
+        console.error(`Warning: Migration ${file} contains null bytes!`);
+      }
+
+      console.log(`Executing migration ${file}, length: ${sql.length}`);
+      console.log('SQL start:', sql.substring(0, 100));
+      console.log('SQL end:', sql.substring(sql.length - 100));
+
+      await p.query('BEGIN');
+      try {
+        await p.query(sql);
+        await p.query('INSERT INTO migrations (name) VALUES ($1);', [file]);
+        await p.query('COMMIT');
+        console.log(`Migration ${file} applied successfully.`);
+      } catch (error) {
+        await p.query('ROLLBACK');
+        console.error(`Migration ${file} failed:`, error.message);
+        throw error;
+      }
     }
-  }
 }
 
 /**

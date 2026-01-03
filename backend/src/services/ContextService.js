@@ -1,6 +1,7 @@
 const FileTreeContextBuilder = require('./FileTreeContextBuilder');
 const PromptTemplateService = require('./PromptTemplateService');
 const HistoryLoaderService = require('./HistoryLoaderService');
+const SkillLoaderService = require('./SkillLoaderService');
 
 class ContextService {
   constructor(options = {}) {
@@ -8,15 +9,21 @@ class ContextService {
     this.fileTreeBuilder = options.fileTreeBuilder || new FileTreeContextBuilder();
     this.promptService = options.promptService || new PromptTemplateService();
     this.historyService = options.historyService || new HistoryLoaderService();
+    this.skillLoader = options.skillLoader || new SkillLoaderService();
   }
 
   /**
    * Builds the system prompt and context data for a project.
    * @param {string} projectId - Project ID
    * @param {string} rootPath - File system root path
-   * @returns {Promise<{ systemPrompt: string, contextData: Object }>}
+   * @param {Object} options - Optional parameters
+   * @param {boolean} options.includeSkills - Whether to include skills in the prompt (default: false)
+   * @param {Array<string>} options.skillNames - Specific skill names to include (if null, include all)
+   * @returns {Promise<{ systemPrompt: string, historyMessages: Array, contextData: Object }>}
    */
-  async buildContext(projectId, rootPath) {
+  async buildContext(projectId, rootPath, options = {}) {
+    const { includeSkills = false, skillNames = null } = options;
+
     // 1. File tree with concise limits
     const fileTree = await this.fileTreeBuilder.buildTree(rootPath, {
       maxDepth: 2,
@@ -52,14 +59,21 @@ class ContextService {
     // 5. Project state (placeholder)
     const projectState = 'Active';
 
-    // 6. Load and fill the template
+    // 6. Skills section (conditional)
+    let skillsSection = '';
+    if (includeSkills) {
+      skillsSection = this.skillLoader.generateSkillsPromptSection(skillNames);
+    }
+
+    // 7. Load and fill the template
     const systemPrompt = this.promptService.loadTemplate('orion_system.md', {
       file_tree: fileTree,
       history_summary: historySummary,
       project_state: projectState,
+      skills_section: skillsSection,
     });
 
-    // 7. Return
+    // 8. Return
     return {
       systemPrompt,
       historyMessages,
@@ -67,6 +81,7 @@ class ContextService {
         file_tree: fileTree,
         history_summary: historySummary,
         project_state: projectState,
+        skills_section: skillsSection,
       },
     };
   }

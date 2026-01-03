@@ -27,35 +27,36 @@ Test three key hypotheses about Orion's skill usage with clear experimental sepa
 ## MVP Implementation Tasks
 
 ### Task 1: Define Skill Structure and Create Three Skills
-- [ ] **Create Skill.md template** in `.Docs/03-PROTOCOLS/Skill.md` defining:
-  - Standard skill structure (name, description, decision triggers, steps, examples)
-  - Checklist format requirements
-  - Metadata conventions (version, last updated, dependencies)
-  - Example of a complete skill document
-- [ ] **Create CAP.md** following Skill.md template in `.Docs/03-PROTOCOLS/CAP.md`:
-  - Complete 7-step protocol with clear examples
-  - Checklist format (Orion's preference)
-  - Decision triggers: "Use when: planning any technical implementation"
-  - Example application to database migration planning
-- [ ] **Create RED.md** following Skill.md template in `.Docs/03-PROTOCOLS/RED.md`:
-  - Requirement Extraction and Decomposition skill
-  - Steps for breaking down requirements into testable components
-  - Decision triggers: "Use when: analyzing ambiguous or complex requirements"
-- [ ] **Create PCC1.md** following Skill.md template in `.Docs/03-PROTOCOLS/PCC1.md`:
-  - Protocol Compliance Checking subskill
-  - Steps for verifying protocol adherence in implementations
-  - Decision triggers: "Use when: reviewing code or designs for protocol compliance"
+- [x] **Create skill directory structure** in `backend/Skills/`:
+  - Each skill in its own folder: `CAP/`, `RED/`, `PCC1/`
+  - Each skill folder contains `SKILL.md` with YAML frontmatter (metadata) and markdown body
+  - YAML frontmatter includes: name, description, version, type, decision_triggers, dependencies, last_updated
+  - Progressive disclosure: YAML frontmatter loads initially, detailed instructions in markdown body
+  - Optional supporting files: `FORMS.md`, `reference.md`, `examples.md`
+  - Optional `scripts/` folder for executable scripts (Python, etc.)
+- [x] **Create CAP skill** in `backend/Skills/CAP/`:
+  - `SKILL.md`: Complete 7-step CAP protocol with YAML frontmatter, examples, checklist format
+  - Updated Step 3 to use PCC1 mapping for data flow analysis
+  - Supporting files as needed
+- [x] **Create RED skill** in `backend/Skills/RED/`:
+  - `SKILL.md`: Requirement Extraction and Decomposition skill with YAML frontmatter
+  - 5-step protocol with decomposition techniques
+  - Supporting files as needed
+- [x] **Create PCC1 skill** in `backend/Skills/PCC1/`:
+  - `SKILL.md`: Protocol Compliance Checking subskill with YAML frontmatter
+  - 6-step protocol for compliance checking
+  - Supporting files as needed
 
 ### Task 2: Update ContextBuilderService for Skill Management
 - [ ] **Update ContextBuilderService** to:
-  - Parse Skill.md template to understand skill structure
-  - Load specific skill files (CAP.md, RED.md, PCC1.md) and generate optimized prompt sections
+  - Scan `backend/Skills/` directory for skill folders
+  - For each skill, read `SKILL.md` and generate optimized prompt sections
   - Format each skill as checklist with steps
   - Verify token impact (<5% increase for all three skills)
   - **Conditional inclusion:** Ability to include/exclude specific skills based on test phase (include only CAP for MVP testing)
 
 ### Task 3: Implement Database Schema for Three-Test Capture
-- [ ] **Create migration** for test tables:
+- [x] **Create migration** for test tables:
   ```sql
   -- Store full test interactions
   CREATE TABLE skill_test_responses (
@@ -96,7 +97,7 @@ Test three key hypotheses about Orion's skill usage with clear experimental sepa
   ```
 
 ### Task 4: Build Automated Test Probe
-- [ ] **Create probe_skill_test.js** in `backend/scripts/probes/`:
+- [x] **Create probe_skill_test.js** in `backend/scripts/probes/`:
   - Initializes fresh Orion instance per test phase
   - Runs through 10 subtasks (2-1-2 through 2-1-6, 2-2-1 through 2-2-5)
   - Executes three phases sequentially:
@@ -105,26 +106,26 @@ Test three key hypotheses about Orion's skill usage with clear experimental sepa
     3. Compliance: CAP skills in memory, forced prompts
   - **Error handling:** Skips subtasks where Orion asks clarification questions, logs reason
   - **Database logging:** Uses DatabaseTool to store responses in skill_test_responses
-- [ ] **Probe design features:**
+- [x] **Probe design features:**
   - Configurable subtask list
   - Retry logic for transient failures
   - Progress reporting and summary statistics
   - Isolation: Each test runs in clean context
 
 ### Task 5: Define Three-Phase Test Procedure
-- [ ] **Test subtasks:** 2-1-2, 2-1-3, 2-1-4, 2-1-5, 2-1-6, 2-2-1, 2-2-2, 2-2-3, 2-2-4, 2-2-5 (10 total)
+- [ ] **Test subtasks:** 2-1-1, 2-1-2, 2-1-3, 2-1-4, 2-1-5, 2-1-6, 2-2-1, 2-2-2, 2-2-3, 2-2-4, 2-2-5, 2-2-6(12 total)
 - [ ] **Baseline phase prompts** (no skills in memory):
-  - `"Review subtask {id}. Provide analysis and Tara prompt without asking clarification questions."`
+  - `Review subtask {id}. Provide your analysis and provide concrete instructions to Tara on how to design and implement the tests, including what to verify and key edge cases, without asking clarification questions unless absolutely necessary.`
 - [ ] **Discovery phase prompts** (skills in memory, natural):
-  - `"Review subtask {id}. Provide analysis and Tara prompt without asking clarification questions."`
+  - `Review subtask {id}. Provide your analysis and provide concrete instructions to Tara on how to design and implement the tests, including what to verify and key edge cases, without asking clarification questions unless absolutely necessary.`
   - *Same prompt as baseline, but CAP skills available in Orion's context*
 - [ ] **Compliance phase prompts** (skills in memory, forced):
-  - `"Using the CAP (Constraint-Aware Planning) skill, analyze subtask {id}. Apply CAP's 7 steps and provide Tara prompt without asking clarification questions."`
+  - `Using the CAP (Constraint-Aware Planning) skill, review subtask {id}. Apply CAP's 7 steps to structure your analysis and then provide concrete instructions to Tara on how to design and implement the tests, including what to verify and key edge cases, without asking clarification questions unless absolutely necessary.`
 - [ ] **Execution order:**
-  1. Baseline: All 10 subtasks
-  2. Discovery: All 10 subtasks  
-  3. Compliance: All 10 subtasks
-  - *Total: 30 test runs*
+  1. Baseline: All 12 subtasks
+  2. Discovery: All 12 subtasks  
+  3. Compliance: All 12 subtasks
+  - *Total: 36 test runs*
 
 ### Task 6: Create Adam Grading Protocol (Updated for Three Tests)
 - [ ] **Update AdamGradingPrompt.md** to include:
@@ -134,7 +135,11 @@ Test three key hypotheses about Orion's skill usage with clear experimental sepa
 - [ ] **Integrate with main Adam prompt** to reference three-test grading responsibilities
 
 ### Task 7: Execute Probe and Grade Responses
-- [ ] **Run probe:** Execute `node backend/scripts/probes/probe_skill_test.js`
+- [ ] **Run probe:** Execute 
+
+set NODE_ENV=test
+node backend/scripts/probes/tdd/three_phase_cap_probe.js
+
 - [ ] **Monitor execution:** Ensure all 30 tests complete (some may be skipped)
 - [ ] **Invoke Adam** to grade all responses:
   - "Adam, please grade all test responses for the skills framework MVP"

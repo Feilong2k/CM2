@@ -293,6 +293,24 @@ Each subtask is designed to be completed by Devon within **3 Aider steps or fewe
   - Check event data structure matches expectations
 - **Estimated Steps**: 1 (trace integration)
 
+#### Subtask 2-2-7: Implement Tool Result Cache for Context Building
+- **Description**: Implement a short-lived Tool Result Cache Service for context-building tools, with TTL (~10 minutes) and fingerprint-based invalidation (e.g., git hash or schema version). Integrate it so repeated calls with identical arguments can reuse fresh results automatically, and expose summaries to Orion via context when appropriate.
+- **Dependencies**: 2-2-2 (ContextBuilder), existing ToolOrchestrator/ToolRunner
+- **Acceptance Criteria**:
+  1. A cache service exists (e.g., `ToolResultCacheService`) that stores tool results keyed by `(toolName, action, argsHash, projectId)` with `createdAt`, `ttlSeconds`, and `fingerprint`.
+  2. For context-building tools (e.g., `DatabaseTool_get_subtask_full_context`, `FileSystemTool_list_files`, `FileSystemTool_search_files`), repeated calls with identical arguments within TTL and matching fingerprint reuse cached results instead of re-calling the tool.
+  3. When the underlying state changes (e.g., git commit hash/dir hash or DB schema version changes, or a write tool runs), cached entries are treated as stale and not reused.
+  4. ContextBuilder can optionally inject compact summaries of recent tool results into Orion's context (system/early messages) without Orion needing to explicitly request reuse.
+- **Devon Instructions**:
+  - Implement `ToolResultCacheService` with `get`/`set` methods and TTL + fingerprint logic.
+  - Integrate with ToolOrchestrator/ToolRunner so cache lookups happen automatically before executing qualifying tools.
+  - Choose appropriate fingerprints (e.g., git HEAD for filesystem operations, schema/migration version for DB context) and wire invalidation on writes.
+- **Tara Instructions**:
+  - Write integration tests that:
+    - Call a context-building tool twice with identical args and verify the second call reuses a cached result when TTL/fingerprint are valid.
+    - Simulate a state change (e.g., bump git hash or mock fingerprint change) and verify the cache is bypassed and the tool is re-called.
+- **Estimated Steps**: 2-3 (service implementation + integration tests)
+
 ---
 
 ### Task 2-3: Skills Framework Implementation
@@ -397,6 +415,19 @@ Each subtask is designed to be completed by Devon within **3 Aider steps or fewe
 - **Tara Instructions**:
   - Verify Orion's prompt contains skill information
 - **Estimated Steps**: 1 (prompt integration)
+
+#### Subtask 2-3-8: Add Trace Events
+- **Description**: Emit standardized trace events for skill loading and execution.
+- **Dependencies**: 2-3-2, 2-3-5
+- **Acceptance Criteria**:
+  1. Trace events emitted for: skill loading (summary), individual skill execution start/end/fail
+  2. Execution traces include inputs, outputs (truncated if large), and duration
+- **Devon Instructions**:
+  - Integrate with TraceStoreService in SkillLoader and SkillTool
+  - Add trace calls for key lifecycle events
+- **Tara Instructions**:
+  - Verify trace events are captured during skill execution tests
+- **Estimated Steps**: 1 (trace integration)
 
 ---
 

@@ -254,18 +254,35 @@ class ToolOrchestrator {
                 });
 
             } catch (error) {
-                // Error in LLM call or processing
-                await this._emitTrace('error', {
-                    turn: this.currentTurn,
-                    error: error.message,
-                    stack: error.stack
-                });
+                // Check for ContextLimitError
+                if (error.name === 'ContextLimitError') {
+                    await this._emitTrace('error', {
+                        turn: this.currentTurn,
+                        error: error.message,
+                        stack: error.stack,
+                        errorType: 'context_limit'
+                    });
 
-                yield {
-                    type: 'error',
-                    error: error.message,
-                    turn: this.currentTurn
-                };
+                    yield {
+                        type: 'error',
+                        error: error.message,
+                        turn: this.currentTurn,
+                        errorType: 'context_limit'
+                    };
+                } else {
+                    // Other errors
+                    await this._emitTrace('error', {
+                        turn: this.currentTurn,
+                        error: error.message,
+                        stack: error.stack
+                    });
+
+                    yield {
+                        type: 'error',
+                        error: error.message,
+                        turn: this.currentTurn
+                    };
+                }
 
                 shouldContinue = false;
                 break;

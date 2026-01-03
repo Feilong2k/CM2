@@ -267,12 +267,24 @@ class DatabaseTool {
   async get_subtask_full_context(subtask_id, projectId = 'P1') {
     this._checkRole();
 
+    // Handle case where subtask_id is an object with a subtask_id property (due to LLM argument passing issue)
+    let actualSubtaskId = subtask_id;
+    if (subtask_id && typeof subtask_id === 'object') {
+      // If the object has a 'subtask_id' property, use that
+      if (subtask_id.subtask_id) {
+        actualSubtaskId = subtask_id.subtask_id;
+      } else {
+        // Otherwise, try to use the first string property? Or throw an error?
+        throw new Error(`Invalid subtask_id object: ${JSON.stringify(subtask_id)}`);
+      }
+    }
+
     console.log('[DatabaseTool] get_subtask_full_context called', {
-      subtask_id,
+      subtask_id: actualSubtaskId,
       projectId,
     });
 
-    const subtask = await this._findSubtaskByIdOrExternal(subtask_id, projectId);
+    const subtask = await this._findSubtaskByIdOrExternal(actualSubtaskId, projectId);
 
     console.log('[DatabaseTool] get_subtask_full_context resolved', {
       subtask_external_id: subtask.external_id,
@@ -976,6 +988,17 @@ class DatabaseTool {
     } catch (error) {
       throw new Error(`Query failed: ${error.message}`);
     }
+  }
+
+  /**
+   * Alias for query method to match function definition name.
+   * Executes a safe SQL query (subject to safety checks).
+   * @param {string} sql - The SQL query to execute.
+   * @param {Array} params - Query parameters (optional)
+   * @returns {Promise<Object>} Query result { rows, rowCount, command }
+   */
+  async safe_query(sql, params = []) {
+    return this.query(sql, params);
   }
 
   /**

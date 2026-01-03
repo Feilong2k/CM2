@@ -1,7 +1,7 @@
-# PLAN VERIFICATION PROTOCOL (PVP)
+# CONSTRAINT AWARE PLANNING (CAP)
 
 ## Overview
-The Plan Verification Protocol (PVP) is a systematic approach to validating that a technical plan will achieve its intended goal. It ensures thoroughness by examining actions, resources, gaps, dependencies, integration, and verification.
+The CONSTRAINT AWARE PLANNING (CAP) is a systematic approach to validating that a technical plan will achieve its intended goal. It ensures thoroughness by examining actions, resources, gaps, dependencies, integration, and verification.
 
 ## Protocol Steps
 
@@ -18,8 +18,8 @@ The Plan Verification Protocol (PVP) is a systematic approach to validating that
 
 ### 3. IDENTIFY GAPS & MAP DATA FLOW
 **What's missing and how does data move?**
-- **Run CDP (Constraint Discovery Protocol):** Use CDP to map Atomic Actions to Resources. This generates the *detailed* flow.
-- **Create PVP Data Flow Map:** Explicitly map the *high-level* flow (Source -> Transform -> Destination) based on CDP findings.
+- **Run PCC1:** Use PCC lv1 to map Atomic Actions to Resources. This generates the *detailed* flow.
+- **Create CAP Data Flow Map:** Explicitly map the *high-level* flow (Source -> Transform -> Destination) based on PCC1 findings.
 - **Identify Gaps:** Check for broken links, missing storage steps, or format mismatches between the steps.
 - Focus on accuracy and thoroughness (ignore security at this stage).
 
@@ -56,14 +56,14 @@ The Plan Verification Protocol (PVP) is a systematic approach to validating that
 - Design tests for all points on the data flow map
 
 ## Usage Guidelines
-- Perform PVP early in the planning phase, before implementation begins.
+- Perform CAP early in the planning phase, before implementation begins.
 - Update the plan as new information emerges.
-- The output of PVP is a verified plan ready for execution, along with test specifications.
+- The output of CAP is a verified plan ready for execution, along with test specifications.
 
 ## Example (Orion UI Chat)
 1. **LIST ACTIONS**: User types message → frontend sends POST → backend processes with OrionAgent → OrionAgent calls DeepSeek API → response stored in database → frontend displays response.
 2. **FIND RESOURCES**: Frontend (ChatPanel.vue), backend (Express server), OrionAgent, DeepSeek API, database (chat_messages table), prompt file, environment variables.
-3. **IDENTIFY GAPS**: Using CDP, discover that polling reads from JSON files while chat writes to database → data source mismatch.
+3. **IDENTIFY GAPS**: Using PCC, discover that polling reads from JSON files while chat writes to database → data source mismatch.
 4. **MAP DEPENDENCIES**: Database migration must run before OrionAgent can store messages; backend server must be running before frontend can connect.
 5. **CHECK INTEGRATION**: Frontend expects `{response_type, message, metadata}` but backend returns `{content, metadata}` → format mismatch.
 6. **VALIDATE COMPLETENESS**: The plan covers the essential flow but must address the polling/data source gap.
