@@ -4,7 +4,63 @@
  * This tool allows Orion to execute skills (protocols) as tools while orchestrating subtasks.
  */
 
+const fs = require('fs').promises;
+const path = require('path');
+const yaml = require('js-yaml');
 const { query } = require('./DatabaseTool');
+const SkillLoader = require('../src/skills/SkillLoader');
+
+/**
+ * Extract frontmatter and body from SKILL.md content
+ */
+function extractFrontmatterAndBody(content) {
+  const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/;
+  const match = content.match(frontmatterRegex);
+  if (!match) {
+    return { frontmatter: null, body: content };
+  }
+  const frontmatter = yaml.load(match[1]);
+  const body = content.slice(match[0].length);
+  return { frontmatter, body };
+}
+
+/**
+ * Execute a skill by name (MVP = load and return definition).
+ * @param {{ skill_name: string, parameters?: object }} args
+ * @returns {Promise<object>}
+ */
+async function executeSkill(args) {
+  const { skill_name, parameters = {} } = args || {};
+
+  if (!skill_name || typeof skill_name !== 'string') {
+    throw new Error('SkillTool_execute: skill_name is required and must be a string.');
+  }
+
+  // Use SkillLoader to find the skill
+  const loader = new SkillLoader(); // defaults to backend/Skills
+  const all = await loader.loadSkillMetadata();
+
+  // Find by name (case-insensitive)
+  const skill = all.find(
+    (s) => s.name.toLowerCase() === skill_name.toLowerCase()
+  );
+
+  if (!skill) {
+    throw new Error(`SkillTool_execute: skill "${skill_name}" not found.`);
+  }
+
+  const skillPath = path.join(loader.rootDir, skill.path);
+  const content = await fs.readFile(skillPath, 'utf8');
+  const { frontmatter, body } = extractFrontmatterAndBody(content);
+
+  return {
+    skill_name: skill.name,
+    path: skill.path,
+    frontmatter: frontmatter || skill.frontmatter || {},
+    body,               // markdown instructions without frontmatter
+    parameters,         // echo back what caller passed
+  };
+}
 
 class SkillTool {
   /**
@@ -212,4 +268,7 @@ class SkillTool {
   }
 }
 
-module.exports = SkillTool;
+module.exports = {
+  executeSkill,
+  SkillTool
+};

@@ -9,8 +9,8 @@ class PromptTemplateService {
    * @returns {string} Processed template string
    */
   loadTemplate(templateName, context = {}) {
-    // Resolve to the prompts directory (matches test expectation: backend/backend/prompts)
-    const promptsDir = path.join(__dirname, '../../backend/prompts');
+    // Resolve to the canonical prompts directory at backend/prompts
+    const promptsDir = path.join(__dirname, '../../prompts');
     const templatePath = path.join(promptsDir, templateName);
 
     // Read the template file

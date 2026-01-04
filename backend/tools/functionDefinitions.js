@@ -541,7 +541,80 @@ const functionDefinitions = [
         required: ['path', 'regex']
       }
     }
-  }
+  },
+
+  // ==================== SkillTool ====================
+  {
+    type: 'function',
+    function: {
+      name: 'SkillTool_execute',
+      description: 'Loads a SKILL.md by name and returns its frontmatter, body, and parameters.',
+      parameters: {
+        type: 'object',
+        properties: {
+          skill_name: {
+            type: 'string',
+            description: 'Name of the skill to execute (from SKILL.md frontmatter.name)',
+          },
+          parameters: {
+            type: 'object',
+            description: 'Optional parameters to pass to the skill (echoed back in result).',
+            additionalProperties: true,
+          },
+        },
+        required: ['skill_name'],
+      },
+    },
+  },
+
+  // ==================== WritePlanTool ====================
+  {
+    type: 'function',
+    function: {
+      name: 'WritePlanTool_execute',
+      description: 'Execute a file write plan with validation to prevent accidental overwrites and ensure safe file operations.',
+      parameters: {
+        type: 'object',
+        properties: {
+          plan: {
+            type: 'object',
+            description: 'The write plan object containing operations.',
+            properties: {
+              intent: {
+                type: 'string',
+                description: 'Description of what this plan achieves.',
+              },
+              operations: {
+                type: 'array',
+                description: 'List of file operations to execute.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    type: {
+                      type: 'string',
+                      enum: ['create', 'append', 'overwrite'],
+                      description: 'Type of operation.',
+                    },
+                    target_file: {
+                      type: 'string',
+                      description: 'Target file path relative to project root.',
+                    },
+                    content: {
+                      type: 'string',
+                      description: 'Content to write.',
+                    },
+                  },
+                  required: ['type', 'target_file', 'content'],
+                },
+              },
+            },
+            required: ['operations'],
+          },
+        },
+        required: ['plan'],
+      },
+    },
+  },
 ];
 
 /**

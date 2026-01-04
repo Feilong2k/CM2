@@ -5,7 +5,7 @@ const path = require('path');
 const PromptTemplateService = require('../PromptTemplateService');
 
 describe('PromptTemplateService', () => {
-  const promptsDir = path.join(__dirname, '../../../backend/prompts');
+  const promptsDir = path.join(__dirname, '../../../prompts');
   const templatePath = path.join(promptsDir, 'orion_system.md');
 
   describe('Test 1: Template existence & syntax', () => {

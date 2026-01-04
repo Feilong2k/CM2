@@ -318,18 +318,21 @@ Each subtask is designed to be completed by Devon within **3 Aider steps or fewe
 
 **Subtasks**:
 
-#### Subtask 2-3-1: Design Skill Directory Structure
-- **Description**: Create `backend/skills/aider_orchestration/` directory with `SKILL.md` (YAML frontmatter + markdown instructions), `/scripts`, `/references` subdirectories.
+#### Subtask 2-3-1: Adopt Canonical Skill Directory Structure
+- **Description**: Adopt `backend/Skills/skill-creator/` (Anthropic Skill Creator) as the canonical skill directory and reference structure for the Skills Framework (SKILL.md + `/scripts` + `/references`).
 - **Dependencies**: None
 - **Acceptance Criteria**:
-  1. Directory structure exists and follows convention
-  2. Example SKILL.md file provided as template
+  1. `backend/Skills/skill-creator/` exists in the repo and matches the expected structure: `SKILL.md`, `scripts/`, `references/`.
+  2. `SKILL.md` has valid YAML frontmatter with at least `name` and `description` fields.
+  3. `scripts/` and `references/` directories follow the progressive disclosure pattern (code in `scripts/`, docs in `references/`).
 - **Devon Instructions**:
-  - Create directories and example skill template
-  - Document structure in README
+  - Verify that `backend/Skills/skill-creator/` (copied from the Anthropics repo) is present and intact.
+  - Confirm `SKILL.md` parses as YAML and contains clear `name` and `description` metadata.
+  - Ensure `scripts/` and `references/` subdirectories exist and reflect the intended progressive disclosure structure.
 - **Tara Instructions**:
-  - Verify directory structure matches specification
-- **Estimated Steps**: 1 (directory creation)
+  - Write tests that validate the existence and basic structure of `backend/Skills/skill-creator/` (directory, SKILL.md, `scripts/`, `references/`).
+  - Validate that SKILL.md has the required frontmatter fields and that the directories align with the documented pattern.
+- **Estimated Steps**: 1 (verification + tests)
 
 #### Subtask 2-3-2: Implement SkillLoader
 - **Description**: Indexes skill metadata (name, description, parameters) from YAML frontmatter of all `SKILL.md` files.
@@ -429,9 +432,87 @@ Each subtask is designed to be completed by Devon within **3 Aider steps or fewe
   - Verify trace events are captured during skill execution tests
 - **Estimated Steps**: 1 (trace integration)
 
+#### Subtask 2-3-9: Implement WritePlanTool (Phase 1)
+- **Description**: Implement a questionnaire-based interface for safer file writing (Create/Append/Overwrite), replacing brittle direct file manipulations for common tasks.
+- **Dependencies**: None (standalone tool)
+- **Acceptance Criteria**:
+  1. `WritePlanTool` exists and accepts a structured "Write Plan" object (intent, target_file, operations).
+  2. Supports `create`, `append`, `overwrite` operations.
+  3. Validates file existence/non-existence as appropriate before writing.
+  4. Automatically creates parent directories if they don't exist.
+  5. Returns a structured report of actions taken with status/error codes.
+- **Devon Instructions**:
+  - Implement `backend/tools/WritePlanTool.js`.
+  - Implement validation logic (fail create if exists; fail append/overwrite if missing).
+  - Implement recursive directory creation.
+  - Defer complex edge cases (symlinks, permissions) for later phases.
+- **Tara Instructions**:
+  - Test operation rules (create vs append vs overwrite).
+  - Test auto-creation of parent directories.
+  - Test structured error reporting.
+- **Estimated Steps**: 2-3 (tool implementation)
+
 ---
 
-*(Note: Due to length constraints, remaining Tasks 2-4 through 2-9 follow the same structured format. Each subtask includes Description, Dependencies, Acceptance Criteria, Devon Instructions, Tara Instructions, and Estimated Steps. All subtasks are designed for 3-step completion.)*
+### Task 2-4: TaraAider Integration (Test Creation)
+**Description:** Implement the workflow for Orion to instruct TaraAider to create tests.
+
+*(Detailed subtasks for 2-4 through 2-9 omitted for brevity but follow the same structure)*
+
+---
+
+### Task 2-7: Concurrency, Reliability & Error Handling
+**Description:** Robustness improvements for handling concurrent edits, failures, and safer file writing patterns.
+
+**Subtasks:**
+
+#### Subtask 2-7-1: File Locking
+- **Description**: Simple file locking mechanism to prevent Aider instances from editing the same file concurrently.
+- **Dependencies**: None
+- **Acceptance Criteria**:
+  1. `FileLockService` exists with acquire/release methods
+  2. Lock has a timeout (e.g. 5 minutes)
+  3. Attempting to acquire a locked file returns false/error
+- **Devon Instructions**:
+  - Implement `backend/src/services/FileLockService.js` using Redis or simple DB table
+- **Tara Instructions**:
+  - Test locking contention (two agents trying to lock same file)
+- **Estimated Steps**: 2 (service + tests)
+
+#### Subtask 2-7-2: Concurrency Manager
+- **Description**: Service to queue or reject conflicting subtask executions.
+- **Dependencies**: 2-7-1 (FileLockService)
+- **Acceptance Criteria**:
+  1. `ConcurrencyManager` checks locks before StepDecomposer assigns steps
+  2. If file is locked, queue the step or fail fast
+- **Devon Instructions**:
+  - Implement `backend/src/services/ConcurrencyManager.js`
+  - Integrate with Orion's main loop
+- **Tara Instructions**:
+  - Simulate concurrent requests and verify queuing behavior
+- **Estimated Steps**: 2 (manager logic)
+
+#### Subtask 2-7-3: Implement Step Retries
+- **Description**: Add retry logic for failed steps.
+- **Dependencies**: 2-1-2 (steps table)
+- **Acceptance Criteria**:
+  1. Failed steps are retried up to 3 times
+  2. Context is refreshed between retries
+  3. `attempt_count` increments correctly
+- **Devon Instructions**:
+  - Update `ToolOrchestrator` to loop on step failure
+  - Implement exponential backoff
+- **Tara Instructions**:
+  - Test retry behavior with mocked failures
+  - Verify attempt count increments
+- **Estimated Steps**: 2 (retry logic)
+
+---
+
+### Task 2-8: Workspace & Git Integration
+**Description:** Implement single isolated workspace strategy.
+
+*(Details omitted)*
 
 ## Success Metrics
 1. **Step Completion Rate:** >80% of steps completed without manual intervention
@@ -463,7 +544,7 @@ Each subtask is designed to be completed by Devon within **3 Aider steps or fewe
 **Phase 1: Foundation & Test Creation (MVP Weeks 2-3)**
 1. **2-1: Database extensions** (Foundation)
 2. **2-2: Core helpers** (Decomposition & Context)
-3. **2-3: Skills Framework** (Basic implementation)
+3. **2-3: Skills Framework** (Basic implementation + **2-3-9 WritePlanTool**)
 4. **2-4: TaraAider Integration** (Test file creation)
 
 **Phase 2: TDD Workflow (MVP Weeks 4-5)**
