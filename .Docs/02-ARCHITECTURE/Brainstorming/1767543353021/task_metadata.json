@@ -1,0 +1,1013 @@
+{
+  "files_in_context": [
+    {
+      "path": ".Docs\\01-AGENTS\\02-Adam\\prompts\\AdamPrompts.md",
+      "record_state": "active",
+      "record_source": "file_mentioned",
+      "cline_read_date": 1767543353543,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/02-ARCHITECTURE/ADRs/ADR-2026-01-04-writeplan-content-capture.session.md",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767543387855,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/tools/WritePlanTool.js",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767543388130,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/src/services/WritePlanTraceLogger.js",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767543388248,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/src/utils/ContentValidationHelper.js",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767543388371,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/tools/__tests__/WritePlanTool.tracing.spec.js",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767543388479,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "writeplan_trace_test.js",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767543388603,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-10_WritePlanTool_Session_Protocol.md",
+      "record_state": "stale",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767548553058,
+      "cline_edit_date": 1767548553058,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/07-WORKLOG/2026-01-03_WritePlanTool_Improvements_and_Work_Log.md",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767551302061,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/07-WORKLOG/2026-01-03_WritePlanTool_Improvements_and_Work_Log.md",
+      "record_state": "stale",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767551471457,
+      "cline_edit_date": 1767551471457,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/09-FUTURE/analysis_cline.md",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767551534925,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/02-ARCHITECTURE/ADRs/ADR-2026-01-04-writeplan-content-capture.session.md",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767552548477,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/02-ARCHITECTURE/ADRs/ADR-2026-01-04-writeplan-content-capture-v2.session.md",
+      "record_state": "stale",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767552625216,
+      "cline_edit_date": 1767552625216,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/07-WORKLOG/2026-01-03_WritePlanTool_Improvements_and_Work_Log.md",
+      "record_state": "stale",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767552677502,
+      "cline_edit_date": 1767552677502,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-10_WritePlanTool_Session_Protocol.md",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767552684426,
+      "cline_edit_date": 1767548553058,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-10_WritePlanTool_Session_Protocol.md",
+      "record_state": "stale",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767552814306,
+      "cline_edit_date": 1767552814306,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/02-ARCHITECTURE/ADRs/ADR-2026-01-04-writeplan-content-capture-v2.session.md",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767553310563,
+      "cline_edit_date": 1767552625216,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/02-ARCHITECTURE/ADRs/ADR-2026-01-04-writeplan-content-capture-v3.session.md",
+      "record_state": "stale",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767553413897,
+      "cline_edit_date": 1767553413897,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/07-WORKLOG/2026-01-03_WritePlanTool_Improvements_and_Work_Log.md",
+      "record_state": "active",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767553542535,
+      "cline_edit_date": 1767553542535,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-10_WritePlanTool_Session_Protocol.md",
+      "record_state": "stale",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767553714614,
+      "cline_edit_date": 1767553714614,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/02-ARCHITECTURE/ADRs/ADR-2026-01-04-writeplan-content-capture-v3.session.md",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767554275451,
+      "cline_edit_date": 1767553413897,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-10_WritePlanTool_Session_Protocol.md",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767554629511,
+      "cline_edit_date": 1767553714614,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "stale",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767554748653,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/tools/__tests__/WritePlanTool.session.spec.js",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767556765946,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/__tests__/writeSession.api.spec.js",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767559153934,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/__tests__/writeSession.api.spec.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767559153934,
+      "cline_edit_date": null,
+      "user_edit_date": 1767559288722
+    },
+    {
+      "path": "backend/__tests__/writeSession.api.spec.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767559153934,
+      "cline_edit_date": null,
+      "user_edit_date": 1767559332589
+    },
+    {
+      "path": "backend/__tests__/writeSession.api.spec.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767559153934,
+      "cline_edit_date": null,
+      "user_edit_date": 1767559359752
+    },
+    {
+      "path": "backend/__tests__/writeSession.api.spec.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767559153934,
+      "cline_edit_date": null,
+      "user_edit_date": 1767559384948
+    },
+    {
+      "path": "backend/__tests__/writeSession.api.spec.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767559153934,
+      "cline_edit_date": null,
+      "user_edit_date": 1767559411150
+    },
+    {
+      "path": "backend/__tests__/writeSession.api.spec.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767559153934,
+      "cline_edit_date": null,
+      "user_edit_date": 1767559438482
+    },
+    {
+      "path": "backend/__tests__/writeSession.api.spec.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767559153934,
+      "cline_edit_date": null,
+      "user_edit_date": 1767559490677
+    },
+    {
+      "path": "backend/__tests__/writeSession.api.spec.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767559153934,
+      "cline_edit_date": null,
+      "user_edit_date": 1767559527077
+    },
+    {
+      "path": "backend/__tests__/writeSession.api.spec.js",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767560037402,
+      "cline_edit_date": null,
+      "user_edit_date": 1767559527077
+    },
+    {
+      "path": ".Docs/02-ARCHITECTURE/ADRs/ADR-2026-01-04-writeplan-content-capture-v3.session.md",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767561754316,
+      "cline_edit_date": 1767553413897,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767561771283,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/tools/functionDefinitions.js",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767562548484,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/tools/functionDefinitions.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767562548484,
+      "cline_edit_date": null,
+      "user_edit_date": 1767563258891
+    },
+    {
+      "path": "backend/__tests__/writeSession.api.spec.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767560037402,
+      "cline_edit_date": null,
+      "user_edit_date": 1767563336184
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767561771283,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": 1767563496175
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767561771283,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": 1767563504802
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767561771283,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": 1767563509923
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767561771283,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": 1767563515521
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767561771283,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": 1767563523361
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767561771283,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": 1767563533768
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767561771283,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": 1767563550624
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767561771283,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": 1767563566471
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767561771283,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": 1767563583956
+    },
+    {
+      "path": "backend/tools/functionDefinitions.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767562548484,
+      "cline_edit_date": null,
+      "user_edit_date": 1767563584048
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767561771283,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": 1767563634181
+    },
+    {
+      "path": ".Docs/09-FUTURE/analysis_cline.md",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767567047424,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/09-FUTURE/analysis_oh_my_opencode.md",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767567054868,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767561771283,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": 1767567154390
+    },
+    {
+      "path": "backend/src/routes/writeSession.routes.js",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767570011903,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/tools/WritePlanTool.js",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767570019682,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/index.js",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767570024828,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/tools/functionDefinitions.js",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767570030096,
+      "cline_edit_date": null,
+      "user_edit_date": 1767563584048
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767561771283,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": 1767572034422
+    },
+    {
+      "path": "backend/tools/WritePlanTool.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767570019682,
+      "cline_edit_date": null,
+      "user_edit_date": 1767572175208
+    },
+    {
+      "path": "backend/tools/__tests__/WritePlanTool.session.mvp.spec.js",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767572694285,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/tools/WritePlanTool.js",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767572700140,
+      "cline_edit_date": null,
+      "user_edit_date": 1767572175208
+    },
+    {
+      "path": "bin/__tests__/cliSession.mvp.spec.js",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767574017900,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "bin/orion-cli-controller.js",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767575436496,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "bin/__tests__/cliSession.mvp.spec.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767574017900,
+      "cline_edit_date": null,
+      "user_edit_date": 1767577674890
+    },
+    {
+      "path": "backend/tests/e2e/writeSession.mvp.spec.js",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767579572220,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/__tests__/writeSession.api.spec.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767560037402,
+      "cline_edit_date": null,
+      "user_edit_date": 1767581273423
+    },
+    {
+      "path": "backend/src/routes/writeSession.routes.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767570011903,
+      "cline_edit_date": null,
+      "user_edit_date": 1767581369725
+    },
+    {
+      "path": "backend/tools/WritePlanTool.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767572700140,
+      "cline_edit_date": null,
+      "user_edit_date": 1767581463186
+    },
+    {
+      "path": "backend/__tests__/writeSession.api.spec.js",
+      "record_state": "active",
+      "record_source": "user_edited",
+      "cline_read_date": 1767560037402,
+      "cline_edit_date": null,
+      "user_edit_date": 1767581604101
+    },
+    {
+      "path": "backend/Skills/RED/SKILL.md",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767583563555,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "bin/__tests__/cliSession.mvp.spec.js",
+      "record_state": "active",
+      "record_source": "user_edited",
+      "cline_read_date": 1767574017900,
+      "cline_edit_date": null,
+      "user_edit_date": 1767583766190
+    },
+    {
+      "path": "backend/tools/WritePlanTool.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767572700140,
+      "cline_edit_date": null,
+      "user_edit_date": 1767584736616
+    },
+    {
+      "path": "backend/tools/WritePlanTool.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767572700140,
+      "cline_edit_date": null,
+      "user_edit_date": 1767584756694
+    },
+    {
+      "path": "backend/tools/WritePlanTool.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767572700140,
+      "cline_edit_date": null,
+      "user_edit_date": 1767584769320
+    },
+    {
+      "path": "backend/tools/WritePlanTool.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767572700140,
+      "cline_edit_date": null,
+      "user_edit_date": 1767584845606
+    },
+    {
+      "path": "backend/src/routes/writeSession.routes.js",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767570011903,
+      "cline_edit_date": null,
+      "user_edit_date": 1767585010077
+    },
+    {
+      "path": ".Docs/09-FUTURE/AGI/REDAGI/RED_AGI.md",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767586378558,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/09-FUTURE/AGI/REDAGI/RED_AGI.md",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767586378558,
+      "cline_edit_date": null,
+      "user_edit_date": 1767587927914
+    },
+    {
+      "path": "continuous-thought-machines/README.md",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767588007631,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "continuous-thought-machines/models/ctm.py",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767588015066,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "continuous-thought-machines/models/modules.py",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767588028500,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "continuous-thought-machines/tasks/rl/train.py",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767588036084,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "continuous-thought-machines/requirements.txt",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767588044103,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "paper/ctm_arxiv_2505.05522.pdf",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767588375157,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/09-FUTURE/AGI/REDAGI/RED_AGI.md",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767586378558,
+      "cline_edit_date": null,
+      "user_edit_date": 1767588929469
+    },
+    {
+      "path": ".Docs/09-FUTURE/AGI/REDAGI/RED_AGI.md",
+      "record_state": "active",
+      "record_source": "user_edited",
+      "cline_read_date": 1767586378558,
+      "cline_edit_date": null,
+      "user_edit_date": 1767588942151
+    },
+    {
+      "path": "continuous-thought-machines/paper/ctm_paper_content.md",
+      "record_state": "active",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767589079126,
+      "cline_edit_date": 1767589079126,
+      "user_edit_date": null
+    },
+    {
+      "path": "continuous-thought-machines/RED_Analysis.md",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767590029787,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "continuous-thought-machines/RED_Analysis.md",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767590038458,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "continuous-thought-machines/RED_Analysis.md",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767590053235,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "continuous-thought-machines/RED_Analysis.md",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767590053235,
+      "cline_edit_date": null,
+      "user_edit_date": 1767590119877
+    },
+    {
+      "path": "continuous-thought-machines/RED_Analysis.md",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767590171744,
+      "cline_edit_date": null,
+      "user_edit_date": 1767590119877
+    },
+    {
+      "path": "continuous-thought-machines/RED_Analysis_v2.md",
+      "record_state": "active",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767590356528,
+      "cline_edit_date": 1767590356528,
+      "user_edit_date": null
+    },
+    {
+      "path": "continuous-thought-machines/RED_Analysis_v3.md",
+      "record_state": "active",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767590557997,
+      "cline_edit_date": 1767590557997,
+      "user_edit_date": null
+    },
+    {
+      "path": "paper/attention_is_all_you_need.pdf",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767591137208,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "paper/RED_1_Atomic_Actions.md",
+      "record_state": "stale",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767591362478,
+      "cline_edit_date": 1767591362478,
+      "user_edit_date": null
+    },
+    {
+      "path": "paper/RED_2_Resources.md",
+      "record_state": "stale",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767591396158,
+      "cline_edit_date": 1767591396158,
+      "user_edit_date": null
+    },
+    {
+      "path": "paper/RED_3_Constraints_and_Gaps.md",
+      "record_state": "stale",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767591431194,
+      "cline_edit_date": 1767591431194,
+      "user_edit_date": null
+    },
+    {
+      "path": "paper/RED_1_Atomic_Actions.md",
+      "record_state": "active",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767591745299,
+      "cline_edit_date": 1767591745299,
+      "user_edit_date": null
+    },
+    {
+      "path": "paper/RED_2_Resources.md",
+      "record_state": "active",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767591788284,
+      "cline_edit_date": 1767591788284,
+      "user_edit_date": null
+    },
+    {
+      "path": "paper/RED_3_Constraints_and_Gaps.md",
+      "record_state": "active",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767591825548,
+      "cline_edit_date": 1767591825548,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/09-FUTURE/AGI/REDAGI/FixingTransformers.md",
+      "record_state": "stale",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767593833133,
+      "cline_edit_date": 1767593833133,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/09-FUTURE/AGI/REDAGI/FixingTransformers.md",
+      "record_state": "stale",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767594292016,
+      "cline_edit_date": 1767594292016,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/09-FUTURE/AGI/REDAGI/FixingTransformers.md",
+      "record_state": "stale",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767594705937,
+      "cline_edit_date": 1767594705937,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/09-FUTURE/AGI/REDAGI/FixingTransformers.md",
+      "record_state": "stale",
+      "record_source": "cline_edited",
+      "cline_read_date": 1767595586211,
+      "cline_edit_date": 1767595586211,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/09-FUTURE/AGI/REDAGI/FixingTransformers.md",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767595637826,
+      "cline_edit_date": 1767595586211,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/09-FUTURE/AGI/REDAGI/FixingTransformers.md",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767595761769,
+      "cline_edit_date": 1767595586211,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/Skills/PCC1/SKILL.md",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767596670604,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/Skills/RED/SKILL.md",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767596671164,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/Skills/CAP/SKILL.md",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767596671840,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "stale",
+      "record_source": "read_tool",
+      "cline_read_date": 1767611078604,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": 1767572034422
+    },
+    {
+      "path": "backend/tests/e2e/writeSession.mvp.spec.js",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767611165693,
+      "cline_edit_date": null,
+      "user_edit_date": null
+    },
+    {
+      "path": "backend/tools/WritePlanTool.js",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767611166184,
+      "cline_edit_date": null,
+      "user_edit_date": 1767584845606
+    },
+    {
+      "path": "backend/src/routes/writeSession.routes.js",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767611166783,
+      "cline_edit_date": null,
+      "user_edit_date": 1767585010077
+    },
+    {
+      "path": "backend/tools/functionDefinitions.js",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767611167358,
+      "cline_edit_date": null,
+      "user_edit_date": 1767563584048
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "stale",
+      "record_source": "user_edited",
+      "cline_read_date": 1767611078604,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": 1767614931801
+    },
+    {
+      "path": ".Docs/04-ROADMAP/DevonPrompts/2-3-11_WritePlanTool_MVP_Implementation.md",
+      "record_state": "active",
+      "record_source": "read_tool",
+      "cline_read_date": 1767615002667,
+      "cline_edit_date": 1767554748653,
+      "user_edit_date": 1767614931801
+    }
+  ],
+  "model_usage": [
+    {
+      "ts": 1767543353074,
+      "model_id": "gpt-5.1",
+      "model_provider_id": "openai-native",
+      "mode": "act"
+    },
+    {
+      "ts": 1767548490486,
+      "model_id": "gemini-3-pro-preview",
+      "model_provider_id": "gemini",
+      "mode": "act"
+    },
+    {
+      "ts": 1767551268394,
+      "model_id": "deepseek-reasoner",
+      "model_provider_id": "deepseek",
+      "mode": "act"
+    },
+    {
+      "ts": 1767551574561,
+      "model_id": "gpt-5.1",
+      "model_provider_id": "openai-native",
+      "mode": "act"
+    },
+    {
+      "ts": 1767552539383,
+      "model_id": "deepseek-reasoner",
+      "model_provider_id": "deepseek",
+      "mode": "act"
+    },
+    {
+      "ts": 1767560496959,
+      "model_id": "gpt-5.1",
+      "model_provider_id": "openai-native",
+      "mode": "act"
+    },
+    {
+      "ts": 1767583554264,
+      "model_id": "gpt-5.2",
+      "model_provider_id": "openai-native",
+      "mode": "act"
+    },
+    {
+      "ts": 1767589022114,
+      "model_id": "gemini-3-pro-preview",
+      "model_provider_id": "gemini",
+      "mode": "act"
+    },
+    {
+      "ts": 1767595910985,
+      "model_id": "gpt-5.2",
+      "model_provider_id": "openai-native",
+      "mode": "act"
+    },
+    {
+      "ts": 1767611049385,
+      "model_id": "gpt-5.1",
+      "model_provider_id": "openai-native",
+      "mode": "plan"
+    }
+  ],
+  "environment_history": [
+    {
+      "ts": 1767543353052,
+      "os_name": "win32",
+      "os_version": "10.0.19045",
+      "os_arch": "x64",
+      "host_name": "Cursor",
+      "host_version": "1.105.1",
+      "cline_version": "3.46.1"
+    }
+  ]
+}

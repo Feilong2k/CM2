@@ -452,6 +452,33 @@ Each subtask is designed to be completed by Devon within **3 Aider steps or fewe
   - Test structured error reporting.
 - **Estimated Steps**: 2-3 (tool implementation)
 
+#### Subtask 2-3-10: Implement UTF-8 Content Validation Helper with Orion Repair Loop
+- **Description**: Create a helper module that validates content for UTF-8 validity and implements the "Orion repair loop" for invalid characters (up to 3 attempts with batching, then safe replacement). This helper will be called by WritePlanTool (and potentially other tools) to ensure content is safe to write to the database/filesystem.
+- **Dependencies**: 2-3-9 (WritePlanTool), existing Orion agent interface for asking questions
+- **Acceptance Criteria**:
+  1. A helper module `ContentValidationHelper` exists with methods:
+     - `validateUtf8(content, chunkSize?)`: returns `{ isValid: boolean, errors: Array<{position, char, charCode, context}> }`
+     - `repairWithOrion(content, errors, filePath?)`: uses Orion to suggest fixes for all invalid positions in a batched request, returns repaired content (or null if Orion cannot fix).
+     - `applySafeReplacement(content, errors)`: replaces invalid characters with `` (REPLACEMENT CHARACTER) and logs details.
+  2. WritePlanTool integrates this helper in its write flow:
+     - Before writing, validate content.
+     - If invalid, attempt up to 3 repair loops (each loop: collect all errors, ask Orion for batched fix, re-validate).
+     - After 3 attempts, apply safe replacement and log.
+  3. The repair loop uses Orion's existing question-answering mechanism (e.g., via ToolOrchestrator) and presents a clear prompt with context around each invalid character.
+  4. Logging includes: file path, number of invalid characters, positions, attempts made, whether safe replacement was used.
+- **Devon Instructions**:
+  - Create `backend/src/utils/ContentValidationHelper.js` (or similar location).
+  - Implement UTF-8 validation using `TextEncoder` or a library.
+  - Implement the repair loop that calls Orion (via existing agent interface) with a batched prompt.
+  - Integrate the helper into WritePlanTool's `execute` method.
+  - Ensure logs are emitted to TraceStoreService.
+- **Tara Instructions**:
+  - Write unit tests for validation (valid/invalid content, chunking).
+  - Write integration tests that simulate the repair loop (mock Orion's response).
+  - Test edge cases: many errors, empty content, Orion returning unparseable response, safe replacement fallback.
+  - Verify that WritePlanTool with the helper passes existing tests and handles invalid content gracefully.
+- **Estimated Steps**: 3-4 (helper + integration + tests)
+
 ---
 
 ### Task 2-4: TaraAider Integration (Test Creation)
@@ -544,7 +571,7 @@ Each subtask is designed to be completed by Devon within **3 Aider steps or fewe
 **Phase 1: Foundation & Test Creation (MVP Weeks 2-3)**
 1. **2-1: Database extensions** (Foundation)
 2. **2-2: Core helpers** (Decomposition & Context)
-3. **2-3: Skills Framework** (Basic implementation + **2-3-9 WritePlanTool**)
+3. **2-3: Skills Framework** (Basic implementation + **2-3-9 WritePlanTool** + **2-3-10 Content Validation Helper**)
 4. **2-4: TaraAider Integration** (Test file creation)
 
 **Phase 2: TDD Workflow (MVP Weeks 4-5)**
@@ -576,6 +603,7 @@ Each subtask is designed to be completed by Devon within **3 Aider steps or fewe
 - **v3.0**: **Revised** with single workspace strategy, database enhancements, and integration probes (Task 2-9)
 - **v4.0**: Incorporates findings from PCC, CAP, RED analyses and ADR mapping with detailed subtasks
 - **v5.0**: **Current** - Structured subtasks with clear Devon/Tara instructions and 3-step completion constraint
+- **v5.1**: Added Subtask 2-3-10 (Content Validation Helper with Orion Repair Loop)
 
 ---
 *Document approved for implementation on 2026-01-01*  

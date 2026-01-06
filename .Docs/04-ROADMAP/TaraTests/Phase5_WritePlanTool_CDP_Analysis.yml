@@ -1,0 +1,219 @@
+# CDP Analysis: Phase 5 WritePlanTool Real Writes
+# Analyst: Tara (Senior Software Tester)
+# Date: 2026-01-05
+# Status: Tests Created - Awaiting Devon Implementation
+
+phase: "5"
+title: "WritePlanTool Real Writes (finalizeViaAPI)"
+feature_context: "WritePlanTool Session Protocol"
+
+# =============================================================================
+# CDP BASIC ANALYSIS
+# =============================================================================
+
+atomic_actions:
+  - action: "begin()"
+    behavior: "Creates session in in-memory Map"
+    expected_outcome: "Returns session_id + awaiting_content stage"
+    risk_level: "low"
+    test_coverage: "Existing MVP tests"
+    
+  - action: "finalizeViaAPI(session_id, content)"
+    behavior: "CURRENTLY STUBBED - should call executeWritePlan()"
+    expected_outcome: "Real file writes for create/append/overwrite"
+    risk_level: "HIGH"
+    test_coverage: "Phase 5.1 integration tests"
+    notes: "Primary focus of this phase"
+    
+  - action: "executeWritePlan(plan)"
+    behavior: "Performs actual file I/O"
+    expected_outcome: "Files created/modified on disk"
+    risk_level: "medium"
+    test_coverage: "Existing tests + Phase 5.1 integration"
+
+resources_touched:
+  - resource: "In-memory session Map"
+    type: "state_store"
+    access_pattern: "read/write"
+    isolation_risks:
+      - "Static state shared across test instances"
+      - "Must clear between tests"
+    mitigation: "clearAllSessions() in beforeEach"
+    
+  - resource: "File System"
+    type: "fs"
+    access_pattern: "write/read"
+    isolation_risks:
+      - "Test files may persist on failure"
+      - "May conflict with other tests"
+    mitigation: "Unique filenames + cleanup in afterEach"
+    
+  - resource: "TraceStoreService"
+    type: "db"
+    access_pattern: "write"
+    isolation_risks: "None for these tests"
+    mitigation: "Not tested in Phase 5"
+
+system_physics:
+  - constraint: "File doesn't exist (for overwrite/append)"
+    failure_mode: "ENOENT error from fs"
+    tested: true
+    test_file: "WritePlanTool.finalize.integration.spec.js"
+    
+  - constraint: "File already exists (for create)"
+    failure_mode: "File already exists error"
+    tested: true
+    test_file: "WritePlanTool.finalize.integration.spec.js"
+    
+  - constraint: "Session expiration (5 min)"
+    failure_mode: "Session deleted, error thrown"
+    tested: true
+    test_file: "WritePlanTool.session.mvp.spec.js"
+    
+  - constraint: "Single active session (MVP)"
+    failure_mode: "Conflict error"
+    tested: true
+    test_file: "WritePlanTool.session.mvp.spec.js"
+
+# =============================================================================
+# ANTI-PLACEHOLDER STRATEGY
+# =============================================================================
+
+anti_placeholder_rules:
+  - rule: "All real-write tests read files after finalize"
+    rationale: "Stubbed implementation returns success but doesn't write files"
+    implementation: "fs.readFile assertions in all create/overwrite/append tests"
+    
+  - rule: "Error tests verify actual error messages from executeWritePlan"
+    rationale: "Stub returns synthetic success, real impl throws filesystem errors"
+    implementation: "rejects.toThrow with specific error patterns"
+    
+  - rule: "Session deletion verified via getStatus failure"
+    rationale: "Observable side effect confirms real finalization"
+    implementation: "getStatus(session_id) throws after finalize"
+
+# =============================================================================
+# TEST FILES CREATED
+# =============================================================================
+
+test_files:
+  phase_5_1:
+    path: "backend/tools/__tests__/WritePlanTool.finalize.integration.spec.js"
+    type: "integration"
+    test_count: 10
+    failing: 6
+    passing: 4
+    description: "Backend real-write tests for create/overwrite/append + error propagation"
+    tests:
+      - name: "creates a real file on disk and removes the session"
+        status: "failing"
+        reason: "Stub doesn't call executeWritePlan"
+      - name: "overwrites existing file content completely"
+        status: "failing"
+        reason: "Stub doesn't call executeWritePlan"
+      - name: "appends content to existing file while preserving original"
+        status: "failing"
+        reason: "Stub doesn't call executeWritePlan"
+      - name: "surfaces executeWritePlan error when create targets existing file"
+        status: "failing"
+        reason: "Stub returns success instead of error"
+      - name: "surfaces error when overwrite targets file that does not exist"
+        status: "failing"
+        reason: "Stub returns success instead of error"
+      - name: "surfaces error when append targets file that does not exist"
+        status: "failing"
+        reason: "Stub returns success instead of error"
+      - name: "throws correct error for unknown session_id"
+        status: "passing"
+        reason: "Guard test - existing behavior"
+      - name: "throws correct error for empty content"
+        status: "passing"
+        reason: "Guard test - existing behavior"
+      - name: "throws correct error for whitespace-only content"
+        status: "passing"
+        reason: "Guard test - existing behavior"
+      - name: "throws correct error for expired session"
+        status: "passing"
+        reason: "Guard test - existing behavior"
+
+  phase_5_2:
+    path: "backend/scripts/probes/tdd/writeSession.orion.integration.spec.js"
+    type: "integration/probe"
+    test_count: 6
+    failing: 3
+    passing: 3
+    description: "Orion behavior probes - long-write pipeline uses WritePlanTool_begin"
+    tests:
+      - name: "uses WritePlanTool_begin and produces real file (no legacy tools)"
+        status: "failing"
+        reason: "Stub doesn't create files"
+      - name: "does NOT call FileSystemTool_write_to_file for large file creation"
+        status: "passing"
+        reason: "Mock controller tracks tool calls correctly"
+      - name: "uses WritePlanTool_begin with operation=overwrite"
+        status: "failing"
+        reason: "Stub doesn't modify files"
+      - name: "uses WritePlanTool_begin with operation=append"
+        status: "failing"
+        reason: "Stub doesn't append to files"
+      - name: "correctly identifies when legacy write tools are called"
+        status: "passing"
+        reason: "Guard test - detection helper works"
+      - name: "correctly identifies when only new tools are called"
+        status: "passing"
+        reason: "Guard test - detection helper works"
+
+# =============================================================================
+# GUARD TESTS (Regression Protection)
+# =============================================================================
+
+guard_tests:
+  existing_mvp_spec:
+    path: "backend/tools/__tests__/WritePlanTool.session.mvp.spec.js"
+    status: "all_passing"
+    test_count: 13
+    description: "Existing session lifecycle tests remain unchanged"
+
+# =============================================================================
+# DEVON IMPLEMENTATION GUIDANCE
+# =============================================================================
+
+implementation_notes:
+  primary_change:
+    file: "backend/tools/WritePlanTool.js"
+    method: "finalizeViaAPI"
+    current_behavior: "Returns synthetic success without calling executeWritePlan"
+    required_behavior: |
+      1. Validate session exists and not expired (already done)
+      2. Validate content not empty (already done)
+      3. Construct plan object: { operations: [{ type, target_file, content }] }
+      4. Call executeWritePlan(plan)
+      5. Handle errors: if operation fails, throw error (don't swallow)
+      6. Delete session after success
+      7. Return result from executeWritePlan
+      
+  error_handling:
+    - "If executeWritePlan throws, propagate the error to caller"
+    - "Do NOT return synthetic success on failure"
+    - "Session should remain (or be deleted) based on error type"
+    
+  expected_line_changes: "Lines 365-383 need modification"
+
+# =============================================================================
+# VALIDATION CHECKLIST
+# =============================================================================
+
+validation:
+  - check: "All 6 failing tests in Phase 5.1 pass after implementation"
+    command: "npx jest backend/tools/__tests__/WritePlanTool.finalize.integration.spec.js"
+    
+  - check: "All 3 failing tests in Phase 5.2 pass after implementation"
+    command: "npx jest backend/scripts/probes/tdd/writeSession.orion.integration.spec.js"
+    
+  - check: "Existing MVP tests still pass"
+    command: "npx jest backend/tools/__tests__/WritePlanTool.session.mvp.spec.js"
+    
+  - check: "No test files left on disk after test run"
+    command: "ls test-phase5-*.txt (should return empty)"
+
+

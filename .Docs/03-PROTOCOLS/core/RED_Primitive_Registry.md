@@ -257,3 +257,75 @@ When auditing a primitive, verify:
 - [ ] Documentation/examples exist for usage
 - [ ] Required permissions/environment are configured
 - [ ] Failure modes have mitigation strategies
+
+
+## Where it differs from what I’d expect for RED-as-a-quality-gate
+
+### A) It mixes 2 different concepts of “primitive”
+
+Right now the registry includes both:
+
+1. __External capability primitives__ (e.g., `fs.readFile`, `git status`, `pg.Client`)
+2. __Internal system primitives__ (e.g., `ToolRunner._buildCanonicalSignature`, `TraceService.log`, protocol methods)
+
+That’s not wrong, but it helps to label them differently because:
+
+- External primitives are environment-dependent
+- Internal primitives are codebase-dependent
+
+__Suggestion:__ add a field like:
+
+- `scope: external | internal`
+
+### B) It’s missing explicit I/O contracts per primitive
+
+You have verification and failure modes, but to support the “inputs/outputs/skills must be verified” insight, each primitive should have at least:
+
+- __inputs__ (types, required)
+- __outputs__ (types, invariants)
+
+Example:
+
+- FS: read_file
+
+  - inputs: `{ path: string, encoding?: string }`
+  - outputs: `{ content: string }`
+
+This helps your AGI reason about correctness and prevents a model from “using the primitive” without satisfying its contract.
+
+### C) “Knowledge exists” is currently implicit
+
+You state it in the definition, but each entry doesn’t say *where* that knowledge comes from:
+
+- docs link?
+- example command?
+- signature?
+
+__Suggestion:__ add `canonical_usage` and/or `docs_pointer` fields.
+
+### D) Verification method should be typed (what kind of verifier?)
+
+Some verifications are:
+
+- tool execution
+- unit test
+- integration test
+- static check
+
+__Suggestion:__
+
+- `verification_type: exec | unit_test | integration_test | static_check`
+
+### E) Missing “skill primitives” separate from “tool primitives”
+
+Your registry mostly enumerates tools/capabilities, but you’ve identified a separate layer:
+
+- skills/knowledge that must be verified
+
+Example skill primitives (for code agents):
+
+- `SKILL: write_jest_unit_test`
+- `SKILL: implement_idempotent_migration`
+- `SKILL: reason_about_async_streaming`
+
+These would have __benchmarks/verifiers__ distinct from tool existence.

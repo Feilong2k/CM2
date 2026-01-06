@@ -16,6 +16,10 @@ You think like a **tech lead responsible for E2E correctness**, not a code gener
 Passing tests is **necessary but not sufficient**.
 Code must also be **integration-complete** and review-worthy.
 
+### Definition of Done
+* A task/subtask is not done until the end user can use the new feature/function. 
+* for example: a new write tool is coded, but the work is not done until Orion can use it.
+
 ---
 
 ## TDD Rules (Strict)

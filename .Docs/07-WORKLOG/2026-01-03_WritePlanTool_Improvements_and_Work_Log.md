@@ -1,7 +1,71 @@
-# Work Log - January 3, 2026
+# Work Log - January 3-4, 2026
 
 ## Overview
 Today's work focused on diagnosing and planning improvements for the WritePlanTool, analyzing Cline and oh-my-opencode strategies for tool result retention, and creating feature specifications for future enhancements.
+
+## January 4, 2026: WritePlanTool Session Protocol Design (Final v3 with Disk Persistence)
+
+### Design Evolution
+After reviewing the ADR with Orion, we identified a **critical flaw** in the original design: the `WritePlanTool_finalize` tool call still contained `raw_content` as a JSON parameter, which would cause the same JSON truncation issues we're trying to solve. We then created ADR v2 to fix this, but after further discussion, we decided to add **disk persistence** for crash recovery and robustness.
+
+### Final Design (ADR v3)
+We created ADR v3 (`.Docs/02-ARCHITECTURE/ADRs/ADR-2026-01-04-writeplan-content-capture-v3.session.md`) with these key changes:
+
+1. **No content in tool calls**: `WritePlanTool_finalize` is **not** exposed as a tool call to Orion
+2. **Internal Node API**: CLI calls `WritePlanTool.finalizeSession(session_id, disk_file_path)` directly
+3. **Single tool call**: Only `WritePlanTool_begin` is exposed for metadata
+4. **Hybrid buffering**: In-memory for performance + periodic disk saves for crash recovery
+5. **UI-compatible**: Same internal API works for both CLI and future UI
+
+### Protocol Flow with Disk Persistence
+```
+Orion → WritePlanTool_begin(metadata) → CLI creates session directory
+Orion → Plain text content → CLI buffers in memory
+          ↓ Periodic save (every 50 lines/5s)
+          → Disk file (logs/write_sessions/uuid/content.txt)
+Orion → "DONE" → CLI detects → finalizeSession(disk_path) → File written
+```
+
+### Key Decisions
+1. **Protocol**: Hybrid DONE detection with timer fallback (2s idle)
+2. **Architecture**: CLI controller manages session state with memory+disk, calls internal API
+3. **Tool API**: Only `WritePlanTool_begin` exposed; `finalizeSession` is internal
+4. **Validation**: ContentValidationHelper remains the single source of truth
+5. **State Management**: Hybrid memory + disk persistence with automatic cleanup
+
+### Implementation Plan
+We updated the TDD-based implementation specification at `.Docs/04-ROADMAP/DevonPrompts/2-3-10_WritePlanTool_Session_Protocol.md` with v3 changes.
+
+**Phase 1:** Backend APIs with Disk Support
+- Tara writes tests for `WritePlanTool.begin()` and internal `finalizeSession()` with disk I/O
+- Devon implements the APIs with session directory management
+
+**Phase 2:** CLI Controller with Hybrid Buffering
+- Implement session state tracking in `bin/orion-cli.js`
+- Add in-memory buffering with periodic disk saves
+- Add DONE detection and timer fallback
+- Call internal `finalizeSession()` with disk file path when ready
+- Add crash recovery on CLI start (orphaned session detection)
+
+**Phase 3:** Validation Integration
+- Integrate with existing ContentValidationHelper
+- Ensure trace persistence JSONB safety
+- Add session-specific logging to disk
+
+### Success Metrics (Final)
+- [ ] Large files (200+ lines) write successfully without JSON parse errors
+- [ ] No `raw_content` parameter in any tool definition
+- [ ] CLI buffers content and saves to disk periodically
+- [ ] Crash recovery works (CLI restart recovers session)
+- [ ] All new unit, integration, and E2E tests pass
+
+### Next Immediate Steps
+1. Update implementation requirements document with v3 changes
+2. Tara will create test suite for the revised APIs with disk persistence
+3. Devon will implement the backend changes with session directory management
+4. We will then implement the CLI controller with hybrid buffering
+
+This final design actually solves the JSON fragility problem while adding professional-grade crash recovery and robustness.
 
 ## WritePlanTool Issues and Solutions
 
@@ -122,7 +186,7 @@ Today's work focused on diagnosing and planning improvements for the WritePlanTo
 Today's work laid the foundation for more robust tool execution in CodeMaestro. By addressing WritePlanTool's validation issues, planning intelligent result caching, and creating feature specifications for future enhancements, we're building toward a more reliable and efficient agent system.
 
 ---
-**Prepared by**: Orion (Orchestrator)  
-**Date**: January 3, 2026  
-**Time**: 10:13 PM EST  
-**Git Commit**: c25f1e65f7aad4628b4e7ef2975adc5b3218ac68
+**Prepared by**: Adam (Architect)  
+**Date**: January 4, 2026  
+**Time**: 1:30 PM EST  
+**Git Commit**: 12b0cd074e9be6b65327b4aba8d3c2009da587af
