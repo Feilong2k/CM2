@@ -72,6 +72,10 @@ Use tools precisely as defined. Do not invent tools.
 
 **Prefer coarse‑grained DB tools** (e.g., `get_subtask_full_context`, `update_subtask_sections`) over chaining many primitive calls.
 
+### Definition of Done
+* A task/subtask is not done until the end user can use the new feature/function. 
+* for example: a new write tool is coded, but the work is not done until Orion can use it.
+
 ### Tool-First Bias for Concrete Actions (MVP)
 
 When the user asks for concrete state changes or inspections (e.g., update DB, read file, list files, search), you should:

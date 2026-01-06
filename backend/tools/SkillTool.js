@@ -25,41 +25,128 @@ function extractFrontmatterAndBody(content) {
 }
 
 /**
+ * Validate parameters against skill definitions and apply defaults.
+ * @param {object} providedParams - Parameters provided by caller
+ * @param {object} paramDefinitions - Parameter definitions from skill frontmatter
+ * @returns {object} Merged parameters with defaults applied
+ * @throws {Error} If required parameter is missing
+ */
+function validateAndApplyDefaults(providedParams, paramDefinitions) {
+  const merged = { ...providedParams };
+
+  // If no parameter definitions, return provided params as-is
+  if (!paramDefinitions || typeof paramDefinitions !== 'object') {
+    return merged;
+  }
+
+  for (const [paramName, paramDef] of Object.entries(paramDefinitions)) {
+    const hasValue = paramName in providedParams;
+
+    // Check required parameters
+    if (paramDef.required && !hasValue) {
+      throw new Error(`Required parameter "${paramName}" is missing`);
+    }
+
+    // Apply default values
+    if (!hasValue && paramDef.default !== undefined) {
+      merged[paramName] = paramDef.default;
+    }
+  }
+
+  return merged;
+}
+
+/**
  * Execute a skill by name (MVP = load and return definition).
- * @param {{ skill_name: string, parameters?: object }} args
+ * @param {{ skill_name: string, parameters?: object, execute?: boolean }} args
+ * @param {function} traceEmitter - Optional trace emitter function
  * @returns {Promise<object>}
  */
-async function executeSkill(args) {
-  const { skill_name, parameters = {} } = args || {};
+async function executeSkill(args, traceEmitter = null) {
+  const { skill_name, parameters = {}, execute = false } = args || {};
+  const startTime = Date.now();
 
-  if (!skill_name || typeof skill_name !== 'string') {
-    throw new Error('SkillTool_execute: skill_name is required and must be a string.');
+  // Helper to emit trace if emitter exists
+  const emit = (event) => traceEmitter && traceEmitter(event);
+
+  try {
+    if (!skill_name || typeof skill_name !== 'string') {
+      throw new Error('SkillTool_execute: skill_name is required and must be a string.');
+    }
+
+    // Use SkillLoader to find the skill
+    const loader = new SkillLoader(); // defaults to backend/Skills
+    const all = await loader.loadSkillMetadata();
+
+    // Find by name (case-insensitive)
+    const skill = all.find(
+      (s) => s.name.toLowerCase() === skill_name.toLowerCase()
+    );
+
+    if (!skill) {
+      throw new Error(`SkillTool_execute: skill "${skill_name}" not found.`);
+    }
+
+    // Emit start trace (after we know skill_name is valid)
+    emit({
+      type: 'skill_execution_start',
+      skill_name: skill_name,
+      parameters: parameters,
+      timestamp: new Date().toISOString()
+    });
+
+    const skillPath = path.join(loader.rootDir, skill.path);
+    const content = await fs.readFile(skillPath, 'utf8');
+    const { frontmatter, body } = extractFrontmatterAndBody(content);
+
+    // If execute flag is true, run execution logic
+    if (execute) {
+      const mergedParams = validateAndApplyDefaults(parameters, frontmatter?.parameters);
+
+      // Emit end trace on success
+      const outputPreview = body.length > 500 ? body.slice(0, 500) : body;
+      emit({
+        type: 'skill_execution_end',
+        skill_name: skill.name,
+        duration_ms: Date.now() - startTime,
+        output_chars: body.length,
+        output_preview: outputPreview,
+        success: true
+      });
+
+      return {
+        skill_name: skill.name,
+        path: skill.path,
+        frontmatter: frontmatter || skill.frontmatter || {},
+        body,
+        parameters: mergedParams,
+        executed: true,
+        execution_result: {
+          success: true,
+          parameters_received: mergedParams,
+          instructions_processed: true,
+        },
+      };
+    }
+
+    // Default: return definition only (backward compatible)
+    return {
+      skill_name: skill.name,
+      path: skill.path,
+      frontmatter: frontmatter || skill.frontmatter || {},
+      body,               // markdown instructions without frontmatter
+      parameters,         // echo back what caller passed
+    };
+  } catch (error) {
+    // Emit fail trace
+    emit({
+      type: 'skill_execution_fail',
+      skill_name: skill_name,
+      error: error.message,
+      duration_ms: Date.now() - startTime
+    });
+    throw error;
   }
-
-  // Use SkillLoader to find the skill
-  const loader = new SkillLoader(); // defaults to backend/Skills
-  const all = await loader.loadSkillMetadata();
-
-  // Find by name (case-insensitive)
-  const skill = all.find(
-    (s) => s.name.toLowerCase() === skill_name.toLowerCase()
-  );
-
-  if (!skill) {
-    throw new Error(`SkillTool_execute: skill "${skill_name}" not found.`);
-  }
-
-  const skillPath = path.join(loader.rootDir, skill.path);
-  const content = await fs.readFile(skillPath, 'utf8');
-  const { frontmatter, body } = extractFrontmatterAndBody(content);
-
-  return {
-    skill_name: skill.name,
-    path: skill.path,
-    frontmatter: frontmatter || skill.frontmatter || {},
-    body,               // markdown instructions without frontmatter
-    parameters,         // echo back what caller passed
-  };
 }
 
 class SkillTool {

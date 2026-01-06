@@ -32,7 +32,7 @@ app.use(cors({
 }));
 
 // 3. Body parsing middleware
-app.use(express.json());
+app.use(express.json({ limit: '12mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // 4. Health check route
@@ -44,8 +44,9 @@ app.get('/health', (req, res) => {
   });
 });
 
-// 5. API routes (to be implemented in routes/ directory)
-// app.use('/api', require('./routes'));
+// 5. API routes
+// Write session routes
+app.use('/api/write-session', require('./src/routes/writeSession.routes'));
 
 // 6. 404 handler
 app.use((req, res) => {

@@ -102,6 +102,16 @@ class SkillLoader {
         continue;
       }
 
+      // Validate parameters field if present
+      if (frontmatter.parameters !== undefined) {
+        if (typeof frontmatter.parameters !== 'object' || 
+            frontmatter.parameters === null || 
+            Array.isArray(frontmatter.parameters)) {
+          console.warn(`SkillLoader: invalid parameters in ${filePath} – parameters must be an object`);
+          frontmatter.parameters = null;
+        }
+      }
+
       // Normalize type and tags
       const type = typeof frontmatter.type === 'string' ? frontmatter.type.toLowerCase() : null;
       const tags = Array.isArray(frontmatter.tags)

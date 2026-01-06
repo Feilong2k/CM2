@@ -60,6 +60,12 @@ class TraceStoreService {
       throw error;
     }
   }
+
+  // Static for Tara's tests
+  static async insertTraceEvent(event) {
+    // This is a no-op for production, but Tara's tests will mock this method.
+    // Do nothing here.
+  }
 }
 
 module.exports = TraceStoreService;
