@@ -467,27 +467,7 @@ const functionDefinitions = [
       }
     }
   },
-  {
-    type: 'function',
-    function: {
-      name: 'FileSystemTool_write_to_file',
-      description: 'Create or overwrite a file. Parents are created automatically.',
-      parameters: {
-        type: 'object',
-        properties: {
-          path: {
-            type: 'string',
-            description: 'Path to the file to create/write, relative to project root.'
-          },
-          content: {
-            type: 'string',
-            description: 'Content to write to the file.'
-          }
-        },
-        required: ['path', 'content']
-      }
-    }
-  },
+  // NOTE: FileSystemTool_write_to_file is removed to unhook it from Orion.
   {
     type: 'function',
     function: {
@@ -568,53 +548,37 @@ const functionDefinitions = [
   },
 
   // ==================== WritePlanTool ====================
+  // NOTE: WritePlanTool_execute removed - use WritePlanTool_begin for ALL file writes.
+  // This ensures content is streamed outside JSON to avoid truncation issues.
   {
     type: 'function',
     function: {
-      name: 'WritePlanTool_execute',
-      description: 'Execute a file write plan with validation to prevent accidental overwrites and ensure safe file operations.',
+      name: 'WritePlanTool_begin',
+      description: 'Begin a new write session for safe multi-step file operations.',
       parameters: {
         type: 'object',
         properties: {
-          plan: {
-            type: 'object',
-            description: 'The write plan object containing operations.',
-            properties: {
-              intent: {
-                type: 'string',
-                description: 'Description of what this plan achieves.',
-              },
-              operations: {
-                type: 'array',
-                description: 'List of file operations to execute.',
-                items: {
-                  type: 'object',
-                  properties: {
-                    type: {
-                      type: 'string',
-                      enum: ['create', 'append', 'overwrite'],
-                      description: 'Type of operation.',
-                    },
-                    target_file: {
-                      type: 'string',
-                      description: 'Target file path relative to project root.',
-                    },
-                    content: {
-                      type: 'string',
-                      description: 'Content to write.',
-                    },
-                  },
-                  required: ['type', 'target_file', 'content'],
-                },
-              },
-            },
-            required: ['operations'],
+          target_file: {
+            type: 'string',
+            description: 'Target file path relative to project root.',
+          },
+          operation: {
+            type: 'string',
+            enum: ['create', 'append', 'overwrite'],
+            description: 'Type of operation.',
+          },
+          intent: {
+            type: 'string',
+            description: 'Description of what this write session aims to achieve.',
           },
         },
-        required: ['plan'],
+        required: ['target_file', 'operation'],
       },
     },
   },
+  // NOTE: WritePlanTool_finalizeViaAPI is intentionally NOT exposed as a tool.
+  // Large content must flow through CLI buffering -> HTTP API, not through tool calls.
+  // See ADR-2026-01-04-v3 and 2-3-11_WritePlanTool_MVP_Implementation.md
 ];
 
 /**
@@ -763,3 +727,4 @@ function parseFunctionCall(toolCall) {
 
 module.exports = functionDefinitions;
 module.exports.parseFunctionCall = parseFunctionCall;
+module.exports.safeParseArgs = safeParseArgs;

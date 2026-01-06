@@ -55,7 +55,7 @@ class ToolOrchestrator {
                 // Call the adapter for this turn
                 const llmStream = this.adapter.callStreaming(currentMessages, tools, {
                     temperature: 0.7,
-                    max_tokens: 2000
+                    max_tokens: 8000  // Increased for large document generation
                 });
 
                 // Process the streaming response
@@ -118,7 +118,34 @@ class ToolOrchestrator {
                 // Execute tool calls
                 const toolResults = [];
                 
+                const TraceStoreService = require('../services/TraceStoreService');
+                const WritePlanTraceLogger = require('../services/WritePlanTraceLogger');
+                async function trace(event) {
+                    // 1) File-based trace
+                    if (WritePlanTraceLogger && typeof WritePlanTraceLogger.log === 'function') {
+                        await WritePlanTraceLogger.log(event);
+                    }
+                    // 2) Tara’s tests: static TraceStoreService.insertTraceEvent is mocked there
+                    if (TraceStoreService && typeof TraceStoreService.insertTraceEvent === 'function') {
+                        try { await TraceStoreService.insertTraceEvent(event); } catch (e) {}
+                    }
+                }
+
                 for (const toolCall of turnToolCalls) {
+                    // Emit tool_call_raw trace BEFORE parsing/repair/execution
+                    const toolName = toolCall.function?.name || 'unknown';
+                    const argsRaw = toolCall.function?.arguments || '';
+                    const conversationId = this.requestId || 'unknown';
+                    const turnIndex = this.currentTurn;
+
+                    await trace({
+                        kind: 'tool_call_raw',
+                        tool_name: toolName,
+                        parsed_arguments_raw: argsRaw,
+                        conversation_id: conversationId,
+                        turn: turnIndex
+                    });
+
                     // Parse the tool call using the safe parser
                     let parsedToolCall;
                     try {
@@ -314,7 +341,7 @@ class ToolOrchestrator {
             // Use empty tools list to discourage further tool calls
             try {
                 const finalChunks = [];
-                for await (const chunk of this.adapter.callStreaming(finalMessages, [], { temperature: 0.7, max_tokens: 2000 })) {
+                for await (const chunk of this.adapter.callStreaming(finalMessages, [], { temperature: 0.7, max_tokens: 8000 })) {
                     const chunkContent = chunk.content || '';
                     finalChunks.push(chunkContent);
                     // Yield chunk events for streaming

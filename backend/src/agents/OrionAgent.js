@@ -62,7 +62,11 @@ Guidelines:
     async _buildFinalMessages(messages) {
         // If we have a projectId and contextService, use dynamic context
         if (this.projectId && this.contextService) {
-            const { systemPrompt, historyMessages } = await this.contextService.buildContext(this.projectId, this.rootPath);
+            const { systemPrompt, historyMessages } = await this.contextService.buildContext(
+                this.projectId,
+                this.rootPath,
+                { includeSkills: true }
+            );
             // The last message in the input array is assumed to be the current user message
             const currentUserMessage = messages[messages.length - 1];
             // Ensure the current user message is from the user (role 'user')
