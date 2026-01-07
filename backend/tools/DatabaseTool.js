@@ -1126,6 +1126,463 @@ class DatabaseTool {
       );
     }
   }
+
+  /**
+   * Find a project by internal numeric id or external_id (e.g., 'P1').
+   * @param {string|number} idOrExternal - Project ID or external ID
+   * @returns {Promise<Object>} Project row
+   */
+  async _findProjectByIdOrExternal(idOrExternal) {
+    let project;
+
+    if (typeof idOrExternal === 'number') {
+      const res = await db.query('SELECT * FROM projects WHERE id = $1', [idOrExternal]);
+      project = res.rows[0];
+    } else if (typeof idOrExternal === 'string') {
+      const res = await db.query(
+        'SELECT * FROM projects WHERE external_id = $1',
+        [idOrExternal]
+      );
+      project = res.rows[0];
+    }
+
+    if (!project) {
+      throw new Error(`Project with ID ${idOrExternal} not found`);
+    }
+
+    return project;
+  }
+
+  /**
+   * Find a step by its internal numeric id.
+   * @param {number} stepId - Internal step ID
+   * @returns {Promise<Object>} Step row
+   */
+  async _findStepById(stepId) {
+    const res = await db.query('SELECT * FROM steps WHERE id = $1', [stepId]);
+    const step = res.rows[0];
+    if (!step) {
+      throw new Error(`Step with ID ${stepId} not found`);
+    }
+    return step;
+  }
+
+  /**
+   * Validate step_type ENUM value.
+   * @param {string} value - The step_type value to validate
+   * @returns {boolean} True if valid
+   * @throws {Error} If value is invalid
+   */
+  _validateStepType(value) {
+    const validTypes = ['implementation', 'test'];
+    if (!validTypes.includes(value)) {
+      throw new Error(`Invalid step_type: must be one of ${validTypes.join(', ')}`);
+    }
+    return true;
+  }
+
+  /**
+   * Validate status ENUM value.
+   * @param {string} value - The status value to validate
+   * @returns {boolean} True if valid
+   * @throws {Error} If value is invalid
+   */
+  _validateStatus(value) {
+    const validStatuses = ['pending', 'in_progress', 'completed', 'failed'];
+    if (!validStatuses.includes(value)) {
+      throw new Error(`Invalid status: must be one of ${validStatuses.join(', ')}`);
+    }
+    return true;
+  }
+
+  /**
+   * Validate assigned_to ENUM value.
+   * @param {string} value - The assigned_to value to validate
+   * @returns {boolean} True if valid
+   * @throws {Error} If value is invalid
+   */
+  _validateAssignedTo(value) {
+    const validAssignees = ['TaraAider', 'DevonAider'];
+    if (!validAssignees.includes(value)) {
+      throw new Error(`Invalid assigned_to: must be one of ${validAssignees.join(', ')}`);
+    }
+    return true;
+  }
+
+  /**
+   * Validate context_files array.
+   * @param {any} value - The context_files value to validate
+   * @returns {boolean} True if valid
+   * @throws {Error} If value is invalid
+   */
+  _validateContextFiles(value) {
+    if (!Array.isArray(value)) {
+      throw new Error('context_files must be an array');
+    }
+    for (const item of value) {
+      if (typeof item !== 'string') {
+        throw new Error('Each item in context_files must be a string');
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Get the next step number for a subtask.
+   * @param {number} subtaskId - Internal subtask ID
+   * @returns {Promise<number>} Next step number
+   */
+  async _getNextStepNumber(subtaskId) {
+    const res = await db.query(
+      'SELECT MAX(step_number) as max FROM steps WHERE subtask_id = $1',
+      [subtaskId]
+    );
+    const max = res.rows[0].max;
+    return max ? max + 1 : 1;
+  }
+
+  // ========== STEP METHODS IMPLEMENTATION ==========
+
+  /**
+   * Creates a new step record.
+   * @param {number} project_id - Internal ID of the project
+   * @param {number} subtask_id - Internal ID of the subtask
+   * @param {number|null} step_number - Step number (if null, auto-increment)
+   * @param {string} step_type - Must be a valid step_type ENUM value
+   * @param {string} assigned_to - Must be a valid assigned_to ENUM value
+   * @param {string|null} file_path - Path to the file associated with the step
+   * @param {string} instructions - Step instructions/description
+   * @param {Array<string>} [context_files=[]] - List of file paths for context
+   * @param {number|null} [parent_step_id=null] - Optional parent step ID
+   * @param {string} [reason=''] - Reason for creation (used in activity log)
+   * @returns {Promise<Object>} The newly created step object
+   */
+  async create_step(project_id, subtask_id, step_number, step_type, assigned_to, file_path, instructions, context_files = [], parent_step_id = null, reason = '') {
+    this._checkRole();
+
+    // Validate required parameters
+    if (!project_id && project_id !== 0) {
+      throw new Error('create_step: project_id is required');
+    }
+    if (!subtask_id && subtask_id !== 0) {
+      throw new Error('create_step: subtask_id is required');
+    }
+    if (!step_type || typeof step_type !== 'string') {
+      throw new Error('create_step: step_type is required');
+    }
+    if (!assigned_to || typeof assigned_to !== 'string') {
+      throw new Error('create_step: assigned_to is required');
+    }
+    if (!instructions || typeof instructions !== 'string') {
+      throw new Error('create_step: instructions is required');
+    }
+
+    // Validate ENUMs
+    this._validateStepType(step_type);
+    this._validateAssignedTo(assigned_to);
+
+    // Validate context_files
+    this._validateContextFiles(context_files);
+
+    // Validate foreign keys exist
+    const project = await this._findProjectByIdOrExternal(project_id);
+    const subtask = await this._findSubtaskByIdOrExternal(subtask_id);
+    
+    if (parent_step_id !== null && parent_step_id !== undefined) {
+      await this._findStepById(parent_step_id);
+    }
+
+    // Determine step number
+    let actualStepNumber = step_number;
+    if (actualStepNumber === null || actualStepNumber === undefined) {
+      actualStepNumber = await this._getNextStepNumber(subtask.id);
+    }
+
+    // Ensure step_number is positive
+    if (actualStepNumber <= 0) {
+      throw new Error('create_step: step_number must be positive');
+    }
+
+    const client = await db.getPool().connect();
+    try {
+      await client.query('BEGIN');
+
+      // Insert the step
+      const insertRes = await client.query(
+        `INSERT INTO steps (
+          project_id, subtask_id, step_number, step_type, assigned_to,
+          file_path, instructions, status, context_files, attempt_count,
+          last_error, parent_step_id, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+        RETURNING *`,
+        [
+          project.id,
+          subtask.id,
+          actualStepNumber,
+          step_type,
+          assigned_to,
+          file_path,
+          instructions,
+          'pending', // default status
+          context_files,
+          0, // default attempt_count
+          null, // default last_error
+          parent_step_id
+        ]
+      );
+
+      if (insertRes.rows.length === 0) {
+        throw new Error('create_step: Failed to create step - no rows returned');
+      }
+
+      const step = insertRes.rows[0];
+
+      await client.query('COMMIT');
+
+      // Log activity under the parent subtask
+      try {
+        await this._addToActivityLog(
+          'subtask',
+          subtask.id,
+          'step_creation',
+          reason || `Created step ${step.id} (${step_type}) for subtask ${subtask.external_id}`
+        );
+      } catch (logError) {
+        console.error('create_step: Failed to add activity log:', logError.message);
+      }
+
+      return step;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      const enhancedError = new Error(`DatabaseTool.create_step failed: ${error.message}`);
+      enhancedError.originalError = error;
+      throw enhancedError;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Updates an existing step.
+   * @param {number} step_id - Internal ID of the step to update
+   * @param {Object} updates - Fields to update
+   * @param {string} [reason=''] - Reason for update (used in activity log)
+   * @returns {Promise<Object>} The updated step object
+   */
+  async update_step(step_id, updates, reason = '') {
+    this._checkRole();
+
+    if (!step_id && step_id !== 0) {
+      throw new Error('update_step: step_id is required');
+    }
+    if (!updates || typeof updates !== 'object') {
+      throw new Error('update_step: updates must be an object');
+    }
+
+    // Validate step exists
+    const step = await this._findStepById(step_id);
+
+    // Define allowed fields and validation
+    const allowedFields = new Set([
+      'instructions', 'status', 'context_files', 'attempt_count', 'last_error',
+      'file_path', 'step_type', 'assigned_to', 'parent_step_id'
+    ]);
+
+    const immutableFields = new Set(['id', 'created_at', 'project_id', 'subtask_id', 'step_number']);
+
+    // Check for immutable fields
+    for (const field of Object.keys(updates)) {
+      if (immutableFields.has(field)) {
+        throw new Error(`update_step: Cannot update immutable field: ${field}`);
+      }
+      if (!allowedFields.has(field)) {
+        throw new Error(`update_step: Cannot update field: ${field}`);
+      }
+    }
+
+    // Validate ENUMs if provided
+    if (updates.step_type !== undefined) {
+      this._validateStepType(updates.step_type);
+    }
+    if (updates.status !== undefined) {
+      this._validateStatus(updates.status);
+    }
+    if (updates.assigned_to !== undefined) {
+      this._validateAssignedTo(updates.assigned_to);
+    }
+
+    // Validate context_files if provided
+    if (updates.context_files !== undefined) {
+      this._validateContextFiles(updates.context_files);
+    }
+
+    // Validate parent_step_id foreign key if provided
+    if (updates.parent_step_id !== undefined && updates.parent_step_id !== null) {
+      await this._findStepById(updates.parent_step_id);
+    }
+
+    const client = await db.getPool().connect();
+    try {
+      await client.query('BEGIN');
+
+      // Build dynamic update query
+      const setClauses = [];
+      const values = [];
+      let idx = 1;
+
+      for (const [key, value] of Object.entries(updates)) {
+        setClauses.push(`${key} = $${idx}`);
+        values.push(value);
+        idx++;
+      }
+      setClauses.push('updated_at = NOW()');
+
+      const updateQuery = `
+        UPDATE steps 
+        SET ${setClauses.join(', ')} 
+        WHERE id = $${idx} 
+        RETURNING *
+      `;
+      values.push(step.id);
+
+      const updateResult = await client.query(updateQuery, values);
+      if (updateResult.rows.length === 0) {
+        throw new Error(`update_step: Step with ID ${step_id} not found during update`);
+      }
+
+      const updatedStep = updateResult.rows[0];
+
+      await client.query('COMMIT');
+
+      // Log activity under the parent subtask
+      try {
+        await this._addToActivityLog(
+          'subtask',
+          step.subtask_id,
+          'step_update',
+          reason || `Updated step ${step.id}`
+        );
+      } catch (logError) {
+        console.error('update_step: Failed to add activity log:', logError.message);
+      }
+
+      return updatedStep;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      const enhancedError = new Error(`DatabaseTool.update_step failed: ${error.message}`);
+      enhancedError.originalError = error;
+      throw enhancedError;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Retrieves a single step by its ID.
+   * @param {number} step_id - Internal ID of the step
+   * @returns {Promise<Object>} Step object
+   */
+  async get_step(step_id) {
+    this._checkRole();
+
+    if (!step_id && step_id !== 0) {
+      throw new Error('get_step: step_id is required');
+    }
+
+    const step = await this._findStepById(step_id);
+    return step;
+  }
+
+  /**
+   * Lists all steps for a given subtask, ordered by step_number ascending.
+   * @param {number} subtask_id - Internal ID of the subtask
+   * @param {number|null} [limit=null] - Maximum number of steps to return
+   * @param {number|null} [offset=null] - Number of steps to skip (for pagination)
+   * @returns {Promise<Array>} Array of step objects
+   */
+  async list_steps_by_subtask(subtask_id, limit = null, offset = null) {
+    this._checkRole();
+
+    if (!subtask_id && subtask_id !== 0) {
+      throw new Error('list_steps_by_subtask: subtask_id is required');
+    }
+
+    // Validate subtask exists
+    const subtask = await this._findSubtaskByIdOrExternal(subtask_id);
+
+    let sql = 'SELECT * FROM steps WHERE subtask_id = $1 ORDER BY step_number ASC';
+    const params = [subtask.id];
+
+    if (limit !== null && limit !== undefined) {
+      sql += ` LIMIT $${params.length + 1}`;
+      params.push(limit);
+    }
+    if (offset !== null && offset !== undefined) {
+      sql += ` OFFSET $${params.length + 1}`;
+      params.push(offset);
+    }
+
+    const res = await db.query(sql, params);
+    return res.rows;
+  }
+
+  /**
+   * Filters steps by status, optionally filtered by project.
+   * @param {string} status - Must be a valid status ENUM value
+   * @param {string|null} [project_id=null] - Project external ID (e.g., 'P1')
+   * @param {number|null} [limit=null] - Maximum number of steps to return
+   * @param {number|null} [offset=null] - Number of steps to skip
+   * @returns {Promise<Array>} Array of step objects
+   */
+  async get_steps_by_status(status, project_id = null, limit = null, offset = null) {
+    this._checkRole();
+
+    if (!status || typeof status !== 'string') {
+      throw new Error('get_steps_by_status: status is required');
+    }
+
+    // Validate status ENUM
+    this._validateStatus(status);
+
+    let sql = '';
+    const params = [];
+    let paramIdx = 1;
+
+    if (project_id) {
+      // Resolve project to internal ID
+      const project = await this._findProjectByIdOrExternal(project_id);
+      sql = `
+        SELECT s.* 
+        FROM steps s
+        WHERE s.status = $${paramIdx} AND s.project_id = $${paramIdx + 1}
+        ORDER BY s.created_at DESC
+      `;
+      params.push(status, project.id);
+      paramIdx += 2;
+    } else {
+      sql = `
+        SELECT s.* 
+        FROM steps s
+        WHERE s.status = $${paramIdx}
+        ORDER BY s.created_at DESC
+      `;
+      params.push(status);
+      paramIdx += 1;
+    }
+
+    if (limit !== null && limit !== undefined) {
+      sql += ` LIMIT $${paramIdx}`;
+      params.push(limit);
+      paramIdx += 1;
+    }
+    if (offset !== null && offset !== undefined) {
+      sql += ` OFFSET $${paramIdx}`;
+      params.push(offset);
+    }
+
+    const res = await db.query(sql, params);
+    return res.rows;
+  }
 }
 
 const defaultInstance = new DatabaseTool('Orion');

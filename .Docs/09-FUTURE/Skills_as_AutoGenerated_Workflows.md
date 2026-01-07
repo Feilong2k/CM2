@@ -179,12 +179,128 @@ steps:
   - analysis: summarize_findings
 ```
 
+## Enhanced Architecture: PCC Extractor as Compiler Front-End
+
+### The Pipeline: PCC Extractor → Skill Compiler → Executable Tool
+
+```
+Natural Language Skill Description
+         ↓
+   PCC Extractor v1
+   (Structured Analysis)
+         ↓
+   YAML Artifact with:
+   - Atomic Actions (A1, A2...)
+   - Resources Touched (R1, R2...)
+   - Coverage Ledger
+   - Missing Fundamentals
+         ↓
+   Skill Compiler
+   (Transforms to SKILL.md v2)
+         ↓
+   Executable Workflow Steps
+   with built-in constraint checks
+```
+
+### PCC Extractor Integration
+
+The PCC Extractor (from `.Docs/03-PROTOCOLS/core/PCC_Extractor_v1.md`) provides:
+
+1. **Structured analysis** of natural language skill descriptions
+2. **Deterministic checks** for completeness and consistency
+3. **Missing fundamentals detection** for scripts, tools, and resources
+4. **Traceability** via source mapping and coverage ledger
+
+### Handling Missing Scripts and Functions
+
+When a skill requires a script/function that isn't available:
+
+1. **Detection**: PCC Extractor marks it in `missing_fundamentals`:
+   ```yaml
+   missing_fundamentals:
+     - id: M1
+       type: "script"
+       item: "backup_to_server.sh"
+       required_by_actions: [A1]
+       status: "MISSING"
+   ```
+
+2. **Auto-generation** (optional enhancement):
+   - Template-based generation for common patterns (backup, cleanup, etc.)
+   - Generated scripts stored in skill's `scripts/` folder
+   - Status changed to `AUTO_GENERATED_NEEDS_REVIEW`
+
+3. **Skill status tracking**:
+   - **complete**: No missing fundamentals
+   - **needs_review**: Auto-generated scripts need verification
+   - **incomplete**: Missing scripts/tools require manual creation
+
+### Template System for Common Operations
+
+```yaml
+# Compiler configuration
+script_templates:
+  backup_to_server:
+    language: "bash"
+    template: |
+      #!/bin/bash
+      # Auto-generated backup script for {{skill_name}}
+      SOURCE="{{source_path}}"
+      DEST="{{server_path}}"
+      
+      if [ ! -f "$SOURCE" ]; then
+        echo "Error: Source file not found: $SOURCE"
+        exit 1
+      fi
+      
+      scp "$SOURCE" "$DEST"
+      echo "Backup completed: $(date)"
+    required_params: ["source_path", "server_path"]
+```
+
+### Re-compilation Capability: Iterative Skill Development
+
+A key advantage of the compiler-based approach is **easy re-compilation**. When skill steps are updated:
+
+1. **Skill authors edit** the natural language description or SKILL.md v2 `steps` section
+2. **Re-run PCC Extractor** to analyze changes and update the YAML artifact
+3. **Recompile** the skill with updated steps
+4. **Skill immediately follows new steps** in the next execution
+
+This enables **iterative skill development**:
+- Start with simple skill description → compile → test
+- Identify missing constraints or steps → update description → recompile
+- Add new capabilities → update → recompile
+
+**Example workflow:**
+```bash
+# Initial compilation
+$ skill-compiler compile database_backup.skill.md
+
+# Test reveals missing error handling
+# Update skill description to include error recovery steps
+
+# Recompile with updates
+$ skill-compiler compile database_backup.skill.md --force
+
+# Skill now includes error recovery in its workflow
+```
+
+**Benefits of re-compilation:**
+- **Rapid iteration**: Update skills without manual step-by-step rewrites
+- **Version control**: Track skill evolution through compilation artifacts
+- **Consistency**: All skill instances immediately use updated steps
+- **Validation**: Each recompilation runs deterministic checks to catch regressions
+
+The PCC Extractor's **coverage ledger** ensures no steps are accidentally removed during updates, maintaining skill completeness across iterations.
+
 ## Implementation Roadmap
 
 ### Phase 1: Foundation (2 weeks)
 - SKILL.md v2 format definition (extended, but optional alongside v1)
 - Step Generator prototype (initially **linear only**, no parallelism)
 - Convert 1-2 **non-critical** skills into v2 format for experimentation
+- **NEW**: Basic PCC Extractor integration for skill analysis
 
 ### Phase 2: Execution Engine (3 weeks)
 - Linear execution engine:
@@ -192,6 +308,7 @@ steps:
   - Use Main LLM for `type: analysis` steps
 - Add **basic dependency support** via `output_var` / `inputs`
 - Design and validate SKILL.md v2 schema with TDD (Tara/Devon prompts)
+- **NEW**: Skill Compiler prototype transforming PCC YAML to SKILL.md v2
 
 ### Phase 3: Integration (2 weeks)
 - Introduce **simple parallel groups**:
@@ -202,6 +319,7 @@ steps:
   - If not → fall back to current "v1" text-based execution
 - Update Orion coordination logic to treat skills with `steps` as **workflows**, not just prompts
 - Add targeted probes to compare behavior vs existing v1 skills
+- **NEW**: Missing script detection and basic template system
 
 ### Phase 4: Optimization (ongoing)
 - Generalize to full **DAG-based** dependency graph:
@@ -214,6 +332,7 @@ steps:
   - Pre-execution of predictable steps
   - Caching frequent results (integrated with ToolResultCacheService)
   - Dynamic step reordering when it is safe to do so
+- **NEW**: Advanced script auto-generation with parameter inference
 
 ## Risk Assessment
 
@@ -221,11 +340,13 @@ steps:
 1. **Step dependency complexity** → Graph algorithms
 2. **Error handling in parallel flows** → Step-level retry logic
 3. **Resource contention** → Agent pool management
+4. **NEW**: Script auto-generation safety → Template validation and review process
 
 ### Mitigation Strategies
 - Start with simple linear skills
 - Implement comprehensive logging
 - Gradual rollout with fallback option
+- **NEW**: Human review required for auto-generated scripts
 
 ## Success Metrics
 
@@ -238,23 +359,26 @@ steps:
 - **Skill execution success rate**: Target 95%+
 - **Parallelization efficiency**: % of steps executed concurrently
 - **Resource utilization**: Optimal agent allocation
+- **NEW**: Skill compilation success rate (PCC Extractor coverage)
 
 ## Cost-Benefit Analysis
 
 ### Development Costs
-- **Effort**: ~7 weeks engineering time
-- **Complexity**: Medium (new concurrent systems)
-- **Maintenance**: Ongoing optimization
+- **Effort**: ~8 weeks engineering time (including PCC Extractor integration)
+- **Complexity**: Medium (new concurrent systems + compiler pipeline)
+- **Maintenance**: Ongoing optimization and template expansion
 
 ### Performance Gains
 - **Speed**: 2-3x faster skill execution
 - **Consistency**: Eliminates execution variations
 - **Scalability**: Handles growing skill library
+- **NEW**: Automated skill creation from natural language
 
 ### Business Impact
 - **Better TDD workflow reliability**
 - **Faster developer feedback loops**
 - **Foundation for advanced automation**
+- **NEW**: Democratized skill creation (non-technical users can describe workflows)
 
 ## Next Steps
 
@@ -263,6 +387,9 @@ steps:
 3. **Benchmark current vs proposed** performance on those skills only (A/B style)
 4. **Define compatibility rules** between SKILL v1 and v2 (fallback behavior in SkillTool_execute)
 5. **Plan gradual rollout** starting with non-critical workflows, keeping this as a **post-MVP** initiative
+6. **NEW**: Implement PCC Extractor integration for skill analysis
+7. **NEW**: Design template system for common script patterns
+8. **NEW**: Create skill status tracking in SkillLoader
 
 ---
 
@@ -289,6 +416,8 @@ This proposal is intentionally a **post-MVP evolution** of the Skills Framework.
 - `SkillTool_execute` will:
   - If `steps` are present → execute via engine (hard, deterministic execution),
   - Else → fall back to v1 behavior (textual, soft execution).
+- **NEW**: Skills can be compiled from natural language via PCC Extractor
+- **NEW**: Missing scripts can be auto-generated with template system
 
 ### Why This Matters (Prompt vs Workflow)
 
@@ -301,11 +430,15 @@ This proposal is intentionally a **post-MVP evolution** of the Skills Framework.
   - Skills become **declarative step graphs**, not just hints.
   - Execution is driven by a workflow engine, not by "soft" prompt interpretation.
   - This reduces the kind of inconsistency we saw with tool calls and soft CAP/PCC prompts.
+  - **NEW**: Skills can be automatically generated and validated for completeness.
 
 In short: keep MVP focused on v1 Skills + SkillLoader + SkillTool_execute. Once that is solid, incrementally introduce SKILL v2 workflows for selected skills to gain consistency and performance without destabilizing the current system.
 
 ---
 
-**Prepared by:** Orion (Orchestrator)  
-**Date:** 2024-01-01  
-**Status:** Proposal for Architecture Review
+Additionally, we've identified a key insight about attention directing through questionnaire-based skills (like 2-3-11 Task Preparation Assistant), which leads to exponential quality improvements by focusing AI attention on specific categories. This insight is noted as a future development opportunity for the skills automation system.
+
+**Updated by:** Orion (Orchestrator)  
+**Original Date:** 2024-01-01  
+**Update Date:** 2026-01-06  
+**Status:** Enhanced Proposal with PCC Extractor Integration

@@ -448,6 +448,157 @@ const functionDefinitions = [
       }
     }
   },
+  {
+    type: 'function',
+    function: {
+      name: 'DatabaseTool_create_step',
+      description: 'Create a new step record in the steps table for workflow tracking.',
+      parameters: {
+        type: 'object',
+        properties: {
+          project_id: {
+            type: ['string', 'number'],
+            description: 'Project ID: internal numeric ID or external ID (e.g., P1).'
+          },
+          subtask_id: {
+            type: ['string', 'number'],
+            description: 'Subtask ID: internal numeric ID or external ID (full or shorthand).'
+          },
+          step_number: {
+            type: ['number', 'null'],
+            description: 'Step number (integer). If null/undefined, will auto-increment for the subtask.'
+          },
+          step_type: {
+            type: 'string',
+            description: 'Step type: "implementation" or "test".'
+          },
+          assigned_to: {
+            type: 'string',
+            description: 'Assigned to: "TaraAider" or "DevonAider".'
+          },
+          file_path: {
+            type: ['string', 'null'],
+            description: 'Path to the file associated with the step (optional).'
+          },
+          instructions: {
+            type: 'string',
+            description: 'Step instructions/description.'
+          },
+          context_files: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'List of file paths for context (optional, default empty array).'
+          },
+          parent_step_id: {
+            type: ['number', 'null'],
+            description: 'Optional parent step internal ID (null if none).'
+          },
+          reason: {
+            type: 'string',
+            description: 'Reason for creation (used in activity log, optional).'
+          }
+        },
+        required: ['project_id', 'subtask_id', 'step_type', 'assigned_to', 'instructions']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'DatabaseTool_update_step',
+      description: 'Update an existing step record.',
+      parameters: {
+        type: 'object',
+        properties: {
+          step_id: {
+            type: 'number',
+            description: 'Internal step ID (numeric).'
+          },
+          updates: {
+            type: 'object',
+            description: 'Fields to update: instructions, status, context_files, attempt_count, last_error, file_path, step_type, assigned_to, parent_step_id.',
+            additionalProperties: true
+          },
+          reason: {
+            type: 'string',
+            description: 'Reason for update (used in activity log, optional).'
+          }
+        },
+        required: ['step_id', 'updates']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'DatabaseTool_get_step',
+      description: 'Retrieve a single step by its internal ID.',
+      parameters: {
+        type: 'object',
+        properties: {
+          step_id: {
+            type: 'number',
+            description: 'Internal step ID (numeric).'
+          }
+        },
+        required: ['step_id']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'DatabaseTool_list_steps_by_subtask',
+      description: 'List all steps for a given subtask, ordered by step_number ascending.',
+      parameters: {
+        type: 'object',
+        properties: {
+          subtask_id: {
+            type: ['string', 'number'],
+            description: 'Subtask ID: internal numeric ID or external ID (full or shorthand).'
+          },
+          limit: {
+            type: ['number', 'null'],
+            description: 'Maximum number of steps to return (optional).'
+          },
+          offset: {
+            type: ['number', 'null'],
+            description: 'Number of steps to skip for pagination (optional).'
+          }
+        },
+        required: ['subtask_id']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'DatabaseTool_get_steps_by_status',
+      description: 'Filter steps by status, optionally filtered by project.',
+      parameters: {
+        type: 'object',
+        properties: {
+          status: {
+            type: 'string',
+            description: 'Status: "pending", "in_progress", "completed", or "failed".'
+          },
+          project_id: {
+            type: ['string', 'null'],
+            description: 'Project external ID (e.g., P1) or internal ID (optional).'
+          },
+          limit: {
+            type: ['number', 'null'],
+            description: 'Maximum number of steps to return (optional).'
+          },
+          offset: {
+            type: ['number', 'null'],
+            description: 'Number of steps to skip for pagination (optional).'
+          }
+        },
+        required: ['status']
+      }
+    }
+  },
 
   // ==================== FileSystemTool ====================
   {

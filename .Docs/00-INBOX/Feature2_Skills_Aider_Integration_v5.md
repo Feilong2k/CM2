@@ -1,11 +1,11 @@
-# Feature 2 Specification: Aider Orchestration & Skills Framework (v5.0)
+# Feature 2 Specification: Aider Orchestration & Skills Framework (v5.2)
 
 ## Overview
 **Title:** Autonomous TDD Workflow with Aider Integration  
 **Objective:** Enable Orion to coordinate TaraAider (testing) and DevonAider (implementation) through a structured skills framework and helper services, following the progressive disclosure pattern inspired by Claude Code.  
 **Priority:** High - Enables autonomous development workflow  
 **Estimated Complexity:** High (requires careful orchestration and concurrency management)  
-**Revision:** v5.0 - Improved subtask structure with clear Devon/Tara instructions and 3-step completion constraint
+**Revision:** v5.2 - Adds Task Preparation Assistant skill with 11-step flow
 
 ## Core Problem Statement
 Orion can decompose features and manage tasks, but cannot delegate single-file implementation/testing work to specialized Aider agents. This specification implements the helper services and database extensions needed for Orion to orchestrate TaraAider and DevonAider in a TDD workflow.
@@ -479,6 +479,50 @@ Each subtask is designed to be completed by Devon within **3 Aider steps or fewe
   - Verify that WritePlanTool with the helper passes existing tests and handles invalid content gracefully.
 - **Estimated Steps**: 3-4 (helper + integration + tests)
 
+#### Subtask 2-3-11: Implement Task Preparation Assistant Skill
+- **Description**: Create a skill that helps Orion systematically prepare for complex tasks by gathering context, running PCC1 analysis, verifying gaps, and creating actionable steps for Tara/Devon with TODO comments in target files. This skill implements the 11-step flow:
+
+  1. **Skill starts** with subtask ID
+  2. **Orion lists context info needed** – guided by task-type-specific prompting categories:
+     - **Infrastructure tasks** (e.g., 2-2-7): "Consider tool patterns, error handling, tracing, performance constraints"
+     - **Orchestration tasks** (e.g., 2-3-11): "Consider user prompts, templates, skill interfaces, workflow steps"
+     - **Feature tasks**: "Consider UI patterns, design system, user flows"
+     - **Default**: For tasks that don't fit a category, prompt: "What context do you need for subtask X-X-X?"
+  3. **Script validates** if requested context exists and is non‑empty, pulls it together and hands to Orion
+  4. **Orion starts PCC1 Skill** with the compiled context
+  5. **Orion fills out PCC1 Skill questionnaire** (single structured response per action), saved to DB by script
+  6. **Orion now has all context including gaps** he noticed during PCC1
+  7. **Orion calls tools to verify gaps**; no gap → continue, yes gap → escalate to human (or continue with recommendation, logged in DB)
+  8. **Orion fills out steps**, including contexts needed for Tara, the file Tara needs to create, and instruction to Tara
+  9. **Scripts check if file is present**; if not create a file and write the instruction as a TODO comment, or if exists append to file as TODO Comment
+  10. **Create the steps in the DB** via StepDecomposer
+  11. **Return step IDs** to Orion for execution tracking
+
+- **Dependencies**: 2-3-5 (Basic Skill Execution Engine), 2-1-5 (DatabaseTool methods), 2-2-1 (StepDecomposer), 2-3-9 (WritePlanTool)
+- **Acceptance Criteria**:
+  1. Skill exists in `backend/Skills/task-preparation-assistant/` with proper SKILL.md, scripts, references
+  2. Orion is prompted with context categories based on task type; his responses are used to gather validated context
+  3. PCC1 questionnaire responses stored in database (single structured response per action)
+  4. Gap verification with escalate/continue decision logic, decision stored in DB
+  5. TODO comments created in target files (create if missing, append if exists) using WritePlanTool
+  6. Steps created in DB with proper context_files links via StepDecomposer
+  7. Step IDs returned to Orion for execution tracking
+- **Devon Instructions**:
+  - Create skill directory `backend/Skills/task-preparation-assistant/`
+  - Implement SKILL.md with 11-step flow documentation, emphasizing the guided context prompting
+  - Create scripts: context-requester.js (with task‑type detection and category prompts), pcc1-orchestrator.js, gap-verifier.js, step-file-writer.js
+  - Integrate with DatabaseTool, StepDecomposer, WritePlanTool
+  - Implement TODO comment file operations (create/append) via WritePlanTool
+- **Tara Instructions**:
+  - Test skill end-to-end with mock subtasks of different types (infrastructure, orchestration, feature, default)
+  - Verify context prompting works (categories appear correctly, Orion can specify needs)
+  - Verify context validation and compilation works
+  - Test PCC1 questionnaire storage and retrieval
+  - Test gap verification and escalation logic
+  - Test TODO comment file operations (create new file, append to existing)
+  - Verify step creation in DB and proper step IDs returned
+- **Estimated Steps**: 3-4 (skill implementation + integration tests)
+
 ---
 
 ### Task 2-4: TaraAider Integration (Test Creation)
@@ -571,7 +615,7 @@ Each subtask is designed to be completed by Devon within **3 Aider steps or fewe
 **Phase 1: Foundation & Test Creation (MVP Weeks 2-3)**
 1. **2-1: Database extensions** (Foundation)
 2. **2-2: Core helpers** (Decomposition & Context)
-3. **2-3: Skills Framework** (Basic implementation + **2-3-9 WritePlanTool** + **2-3-10 Content Validation Helper**)
+3. **2-3: Skills Framework** (Basic implementation + **2-3-9 WritePlanTool** + **2-3-10 Content Validation Helper** + **2-3-11 Task Preparation Assistant**)
 4. **2-4: TaraAider Integration** (Test file creation)
 
 **Phase 2: TDD Workflow (MVP Weeks 4-5)**
@@ -602,10 +646,12 @@ Each subtask is designed to be completed by Devon within **3 Aider steps or fewe
 - **v2.0**: Final specification incorporating all locked decisions
 - **v3.0**: **Revised** with single workspace strategy, database enhancements, and integration probes (Task 2-9)
 - **v4.0**: Incorporates findings from PCC, CAP, RED analyses and ADR mapping with detailed subtasks
-- **v5.0**: **Current** - Structured subtasks with clear Devon/Tara instructions and 3-step completion constraint
+- **v5.0**: Structured subtasks with clear Devon/Tara instructions and 3-step completion constraint
 - **v5.1**: Added Subtask 2-3-10 (Content Validation Helper with Orion Repair Loop)
+- **v5.2**: **Current** - Added Subtask 2-3-11 (Task Preparation Assistant Skill with 11-step flow)
 
 ---
+
 *Document approved for implementation on 2026-01-01*  
 *Architect: Adam*  
 *Status: Ready for implementation with structured subtasks – MVP focused on Tasks 2-1 through 2-7 and 2-9*

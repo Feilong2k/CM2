@@ -3,6 +3,19 @@
 -- Dependencies: 0002_step_enum_types.sql (ENUM types must exist)
 -- Task: 2-1-2 Create steps Table
 
+-- First, create the projects table if it doesn't exist (needed for foreign key)
+CREATE TABLE IF NOT EXISTS projects (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    path TEXT,
+    git_url TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Note: subtasks table should already exist from initial migration
+
 -- Create steps table
 CREATE TABLE IF NOT EXISTS steps (
     id SERIAL PRIMARY KEY,
@@ -30,6 +43,6 @@ CREATE INDEX IF NOT EXISTS idx_steps_status ON steps(status);
 CREATE INDEX IF NOT EXISTS idx_steps_parent_step_id ON steps(parent_step_id);
 CREATE INDEX IF NOT EXISTS idx_steps_created_at ON steps(created_at);
 
--- Add table comment
+-- Add table comments
+COMMENT ON TABLE projects IS 'Projects that tasks and steps belong to';
 COMMENT ON TABLE steps IS 'Tracks individual workflow steps within subtasks';
-
