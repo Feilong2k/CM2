@@ -1,8 +1,49 @@
 const { getPool } = require('../db/connection');
 
 class TraceStoreService {
-  constructor({ pool } = {}) {
+  constructor({ pool, projectId } = {}) {
     this.pool = pool || getPool();
+    this.projectId = projectId || null;
+  }
+
+  /**
+   * Convenience wrapper used by higher-level services to emit semantic trace events.
+   *
+   * For now we only implement the minimal mapping required by ContextBuilder tests.
+   */
+  async emit(eventName, payload = {}) {
+    const resolvedProjectId = payload.projectId || this.projectId;
+    if (!resolvedProjectId) {
+      throw new Error('TraceStoreService.emit: projectId is required');
+    }
+
+    switch (eventName) {
+      case 'context_build_started': {
+        const { stepId } = payload;
+        return this.insertTraceEvent({
+          projectId: resolvedProjectId,
+          source: 'ContextBuilder',
+          type: 'context_build_started',
+          summary: `Context build started for step ${stepId}`,
+          details: { stepId },
+        });
+      }
+
+      case 'context_build_completed': {
+        const { stepId, targetFile, contextFileCount, agentType } = payload;
+        return this.insertTraceEvent({
+          projectId: resolvedProjectId,
+          source: 'ContextBuilder',
+          type: 'context_build_completed',
+          summary: `Context build completed for step ${stepId}`,
+          details: { stepId, targetFile, contextFileCount, agentType },
+        });
+      }
+
+      default:
+        // Keep simple for now: unknown events are ignored.
+        return;
+    }
   }
 
   async insertTraceEvent({

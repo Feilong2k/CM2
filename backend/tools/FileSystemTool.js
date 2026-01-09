@@ -14,6 +14,28 @@ class FileSystemTool {
     };
   }
 
+  /**
+   * Check if a file exists (project-root relative).
+   *
+   * NOTE: This is an instance method used internally by services (e.g. ContextBuilder),
+   * not exposed as an LLM tool.
+   *
+   * @param {string} filePath
+   * @returns {Promise<boolean>} true if exists, false if ENOENT
+   */
+  async file_exists(filePath) {
+    this._validatePathOperation(filePath, 'file_exists');
+    const { absolutePath } = this._prepareFileOperation(filePath, true);
+
+    try {
+      await fs.promises.access(absolutePath, fs.constants.F_OK);
+      return true;
+    } catch (err) {
+      if (err && err.code === 'ENOENT') return false;
+      throw err;
+    }
+  }
+
   // Helper to get repo root regardless of where the server was launched from.
   // This file lives at: <repoRoot>/backend/tools/FileSystemTool.js
   // so repoRoot is two levels up from __dirname.

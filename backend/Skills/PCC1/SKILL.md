@@ -2,7 +2,7 @@
 name: "PCC1"
 description: "Preflight Constraint Check Level 1 - Action-Resource mapping to identify gaps, constraints, and risks"
 version: "1.0.0"
-type: "subskill"
+type: "skill"
 decision_triggers:
   - "Planning technical implementations"
   - "Analyzing complex tasks with multiple actions"

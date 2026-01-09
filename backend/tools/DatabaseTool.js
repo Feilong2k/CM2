@@ -1245,20 +1245,35 @@ class DatabaseTool {
 
   /**
    * Creates a new step record.
-   * @param {number} project_id - Internal ID of the project
-   * @param {number} subtask_id - Internal ID of the subtask
-   * @param {number|null} step_number - Step number (if null, auto-increment)
-   * @param {string} step_type - Must be a valid step_type ENUM value
-   * @param {string} assigned_to - Must be a valid assigned_to ENUM value
-   * @param {string|null} file_path - Path to the file associated with the step
-   * @param {string} instructions - Step instructions/description
-   * @param {Array<string>} [context_files=[]] - List of file paths for context
-   * @param {number|null} [parent_step_id=null] - Optional parent step ID
-   * @param {string} [reason=''] - Reason for creation (used in activity log)
+   * @param {Object} stepData - Step data object
+   * @param {number|string} stepData.project_id - Project ID (internal or external)
+   * @param {number|string} stepData.subtask_id - Subtask ID (internal or external)
+   * @param {number|null} stepData.step_number - Step number (if null, auto-increment)
+   * @param {string} stepData.step_type - Must be a valid step_type ENUM value
+   * @param {string} stepData.assigned_to - Must be a valid assigned_to ENUM value
+   * @param {string|null} stepData.file_path - Path to the file associated with the step
+   * @param {string} stepData.instructions - Step instructions/description
+   * @param {Array<string>} [stepData.context_files=[]] - List of file paths for context
+   * @param {number|null} [stepData.parent_step_id=null] - Optional parent step ID
+   * @param {string} [stepData.reason=''] - Reason for creation (used in activity log)
    * @returns {Promise<Object>} The newly created step object
    */
-  async create_step(project_id, subtask_id, step_number, step_type, assigned_to, file_path, instructions, context_files = [], parent_step_id = null, reason = '') {
+  async create_step(stepData) {
     this._checkRole();
+
+    // Destructure with defaults
+    const {
+      project_id,
+      subtask_id,
+      step_number,
+      step_type,
+      assigned_to,
+      file_path,
+      instructions,
+      context_files = [],
+      parent_step_id = null,
+      reason = ''
+    } = stepData;
 
     // Validate required parameters
     if (!project_id && project_id !== 0) {

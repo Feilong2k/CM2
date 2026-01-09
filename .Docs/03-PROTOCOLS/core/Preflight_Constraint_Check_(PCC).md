@@ -138,7 +138,7 @@ PCC is designed to be used within PVP step 3 (IDENTIFY GAPS). The structured for
 - **Tara's Testing Protocol**: Can use the constraints and risks identified by PCC to create targeted tests.
 
 
-# Constraint Discovery Protocol - Level 2:
+# Preflight Constraint Check - Level 2:
 
 PART 1: RESOURCE ANALYSIS
 | Resource | Current State | Who Uses It | Exclusive/Shared |
@@ -173,10 +173,10 @@ PART 6: FINAL VERDICT
 4. RECOMMENDED MITIGATIONS: [if any]
 
 
-# Constraint Discovery Protocol Level 3 (Gap Analysis + Conditional)
+# Preflight Constraint Check Level 3 (Gap Analysis + Conditional)
 
 ```
-Run this plan through Constraint Discovery Protocol v4:
+Run this plan through Preflight Constraint Check v4:
 
 PART 1-5: Same as Full v3 (above)
 

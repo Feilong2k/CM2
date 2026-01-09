@@ -23,7 +23,7 @@ class Interface {
     this.projectId = options.projectId || null;
     this.verbose = options.verbose || false;
     this.messageStoreService = options.messageStoreService || new MessageStoreService();
-    this.traceStoreService = options.traceStoreService || new TraceStoreService();
+    this.traceStoreService = options.traceStoreService || new TraceStoreService({ projectId: this.projectId });
   }
 
   async init() {
@@ -244,7 +244,7 @@ async function runNonInteractive(projectId, userMessage, verbose = false) {
     dotenv.config({ path: path.resolve(__dirname, '../backend/.env') });
 
     const contextService = new ContextService();
-    const traceStoreService = new TraceStoreService();
+    const traceStoreService = new TraceStoreService({ projectId });
     const messageStoreService = new MessageStoreService();
 
     console.error('[DEBUG] Creating OrionAgent...');

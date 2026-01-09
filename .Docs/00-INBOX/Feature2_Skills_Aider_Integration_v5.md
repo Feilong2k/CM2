@@ -5,7 +5,7 @@
 **Objective:** Enable Orion to coordinate TaraAider (testing) and DevonAider (implementation) through a structured skills framework and helper services, following the progressive disclosure pattern inspired by Claude Code.  
 **Priority:** High - Enables autonomous development workflow  
 **Estimated Complexity:** High (requires careful orchestration and concurrency management)  
-**Revision:** v5.2 - Adds Task Preparation Assistant skill with 11-step flow
+**Revision:** v5.3 - Adds Step Reasoning Tracking (Thought Process Capture) as Subtask 2-2-8
 
 ## Core Problem Statement
 Orion can decompose features and manage tasks, but cannot delegate single-file implementation/testing work to specialized Aider agents. This specification implements the helper services and database extensions needed for Orion to orchestrate TaraAider and DevonAider in a TDD workflow.
@@ -233,6 +233,56 @@ Each subtask is designed to be completed by Devon within **3 Aider steps or fewe
   - Test context truncation, missing files, formatting
 - **Estimated Steps**: 2-3 (class + formatting)
 
+### Purpose
+
+ContextBuilder __does not read file contents__ or build a large prompt. Instead it prepares the *paths + instructions* needed to run Aider non-interactively.
+
+### Input
+
+- `buildContext(stepId)` where `stepId` is the `steps.id` in the DB.
+
+### Output
+
+A structured object like:
+
+```js
+{
+  targetFile: 'path/to/target.js',               // used with: aider --add
+  contextFiles: ['path/context1.js', ...],       // used with: aider --read (plus agent prompt)
+  instructions: 'Write a test for ...',          // passed as the final CLI instruction string
+  agentType: 'TaraAider'                         // or 'DevonAider'
+}
+```
+
+### Required behavior
+
+1. Fetch step via `DatabaseTool.get_step(stepId)`; throw if not found.
+
+2. Validate required fields exist on the step: `file_path`, `instructions`, `assigned_to`, `context_files`.
+
+3. Determine agent prompt file:
+
+   - Tara → `backend/prompts/TaraPrompt.md`
+   - Devon → `backend/prompts/DevonPrompt.md`
+
+4. `contextFiles = step.context_files + [agentPromptFile]`.
+
+5. Optional file existence checks via FileSystemTool (policy decision: warn vs throw). In later 2-2-4, tests were updated to expect __throw on missing context files__.
+
+6. Emit trace events for started/completed (and warifnings if using warn mode).
+
+### Integration note
+
+The invoker uses it like:
+
+```bash
+aider --read file1 --read file2 --add targetFile "instructions"
+```
+
+If you want, I can restate it as an “Implementation Requirements” block (overview / details / acceptance criteria / edge cases) so it’s copy-pastable into a roadmap doc.
+
+
+
 #### Subtask 2-2-3: Design Orion-StepDecomposer JSON Interface
 - **Description**: Define and document schema for step decomposition input from Orion.
 - **Dependencies**: 2-2-1 (StepDecomposer)
@@ -252,7 +302,7 @@ Each subtask is designed to be completed by Devon within **3 Aider steps or fewe
 - **Description**: Graceful handling of missing context files, permission errors, large files.
 - **Dependencies**: 2-2-1, 2-2-2 (core classes)
 - **Acceptance Criteria**:
-  1. Missing context files logged as warnings, not fatal errors
+  1. Missing context files fails loudly
   2. Permission errors reported clearly
   3. Large files truncated or handled with appropriate warnings
   4. All errors logged to TraceStoreService
@@ -285,6 +335,8 @@ Each subtask is designed to be completed by Devon within **3 Aider steps or fewe
 - **Acceptance Criteria**:
   1. Trace events emitted for key actions: decomposition started/completed, context building started/completed
   2. Events include relevant metadata (step IDs, file counts, error details)
+  3. shows up in the cli when chatting with Orion
+  4. Stored into DB for future analysis
 - **Devon Instructions**:
   - Integrate with TraceStoreService in both classes
   - Add trace calls at beginning/end of major operations
@@ -310,6 +362,26 @@ Each subtask is designed to be completed by Devon within **3 Aider steps or fewe
     - Call a context-building tool twice with identical args and verify the second call reuses a cached result when TTL/fingerprint are valid.
     - Simulate a state change (e.g., bump git hash or mock fingerprint change) and verify the cache is bypassed and the tool is re-called.
 - **Estimated Steps**: 2-3 (service implementation + integration tests)
+
+#### Subtask 2-2-8: Implement Step Reasoning Tracking (Thought Process Capture)
+- **Description**: Extend the step decomposition schema and StepDecomposer to capture the reasoning behind each step, including goals, alternatives considered, assumptions, constraints, and decision points. This transforms steps from mere action tracking to reasoning-action pairs, enabling better debugging, knowledge transfer, and process improvement.
+- **Dependencies**: 2-2-3 (Design Orion-StepDecomposer JSON Interface), 2-2-1 (StepDecomposer Class)
+- **Acceptance Criteria**:
+  1. Database migration adds `reasoning` JSONB column to `steps` table with default `{}`
+  2. Step decomposition JSON schema extended to include optional `reasoning` field with structure: `goal`, `alternatives_considered`, `assumptions`, `constraints`, `decision_points`
+  3. StepDecomposer validates and stores reasoning in database
+  4. Orion's prompt updated to include guidelines for providing reasoning in decompositions
+  5. Existing steps remain compatible (backward compatible)
+- **Devon Instructions**:
+  - Create migration to add `reasoning` JSONB column to `steps` table
+  - Update StepSchemaValidator to validate the new `reasoning` structure
+  - Update StepDecomposer to store reasoning in database
+  - Update Orion's system prompt to include reasoning guidelines and examples
+- **Tara Instructions**:
+  - Write tests for the new `reasoning` field validation and storage
+  - Test backward compatibility (steps without reasoning)
+  - Test that Orion can parse and use the updated schema
+- **Estimated Steps**: 2-3 (migration, validation updates, prompt updates)
 
 ---
 
@@ -476,8 +548,7 @@ Each subtask is designed to be completed by Devon within **3 Aider steps or fewe
   - Write unit tests for validation (valid/invalid content, chunking).
   - Write integration tests that simulate the repair loop (mock Orion's response).
   - Test edge cases: many errors, empty content, Orion returning unparseable response, safe replacement fallback.
-  - Verify that WritePlanTool with the helper passes existing tests and handles invalid content gracefully.
-- **Estimated Steps**: 3-4 (helper + integration + tests)
+  - Verify that WritePlanTool with the helper passes existing tests and handles invalid content gracefully.- **Estimated Steps**: 3-4 (helper + integration + tests)
 
 #### Subtask 2-3-11: Implement Task Preparation Assistant Skill
 - **Description**: Create a skill that helps Orion systematically prepare for complex tasks by gathering context, running PCC1 analysis, verifying gaps, and creating actionable steps for Tara/Devon with TODO comments in target files. This skill implements the 11-step flow:

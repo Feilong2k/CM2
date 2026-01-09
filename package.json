@@ -25,6 +25,7 @@
     "frontend"
   ],
   "dependencies": {
+    "ajv": "^8.17.1",
     "uuid": "^13.0.0"
   }
 }
