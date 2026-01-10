@@ -8,16 +8,6 @@ describe('Tool Reliability – write_to_file', () => {
   const testOutputDir = path.join(__dirname, '../../test-output');
   const tool = fileSystemTool;
 
-  // Helper to find the write_to_file function definition
-  function getWriteToFileDefinition() {
-    return functionDefinitions.find(
-      (def) =>
-        def.type === 'function' &&
-        def.function &&
-        def.function.name === 'FileSystemTool_write_to_file'
-    );
-  }
-
   beforeAll(() => {
     // Ensure test output directory exists
     if (!fs.existsSync(testOutputDir)) {
@@ -143,16 +133,18 @@ End of file.
 
   describe('ToolRunner + functionDefinitions integration', () => {
     it('writes a large file end-to-end via FileSystemTool_write_to_file', async () => {
-      const def = getWriteToFileDefinition();
-      expect(def).toBeDefined();
-
       const size = 50_000;
       const content = 'X'.repeat(size);
       const targetPath = path.join(testOutputDir, 'toolrunner-large.txt');
 
       const toolCall = {
         function: {
-          name: def.function.name,
+          // We no longer expose FileSystemTool_write_to_file via
+          // functionDefinitions, but parseFunctionCall can still
+          // interpret this function-style name. This keeps the
+          // ToolRunner + argument parsing contract exercised
+          // without requiring the function to be LLM-callable.
+          name: 'FileSystemTool_write_to_file',
           arguments: JSON.stringify({
             path: targetPath,
             content,
@@ -180,9 +172,6 @@ End of file.
     });
 
     it('writes complex content via ToolRunner without argument parsing errors', async () => {
-      const def = getWriteToFileDefinition();
-      expect(def).toBeDefined();
-
       const complexContent = `
 # Title "with quotes" and 'single quotes'
 
@@ -203,7 +192,7 @@ const foo = "bar";
 
       const toolCall = {
         function: {
-          name: def.function.name,
+          name: 'FileSystemTool_write_to_file',
           arguments: JSON.stringify({
             path: targetPath,
             content: complexContent,

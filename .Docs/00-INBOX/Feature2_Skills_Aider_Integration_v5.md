@@ -344,6 +344,7 @@ If you want, I can restate it as an “Implementation Requirements” block (ove
   - Verify trace events are captured during tests
   - Check event data structure matches expectations
 - **Estimated Steps**: 1 (trace integration)
+  5. E2E integration
 
 #### Subtask 2-2-7: Implement Tool Result Cache for Context Building
 - **Description**: Implement a short-lived Tool Result Cache Service for context-building tools, with TTL (~10 minutes) and fingerprint-based invalidation (e.g., git hash or schema version). Integrate it so repeated calls with identical arguments can reuse fresh results automatically, and expose summaries to Orion via context when appropriate.
@@ -655,6 +656,206 @@ If you want, I can restate it as an “Implementation Requirements” block (ove
 **Description:** Implement single isolated workspace strategy.
 
 *(Details omitted)*
+
+---
+
+### Task 2-9: Integration Probes & E2E Validation
+**Description:** End-to-end testing and validation probes to ensure the entire system works together.
+
+*(Details omitted)*
+
+---
+
+### Task 2-10: Integration Readiness Framework
+**Description:** Implement `IntegrationReadinessService` to validate integration readiness before subtask execution, preventing the "unit tests pass but integration fails" problem.
+
+**Subtasks:**
+
+#### Subtask 2-10-1: Core Service Architecture
+- **Description**: Create the base `IntegrationReadinessService` class with validation registry and configuration system.
+- **Dependencies**: Task 2-1 (Database extensions), Task 2-2 (Core helpers)
+- **Acceptance Criteria**:
+  1. `IntegrationReadinessService.js` exists in `backend/src/services/`
+  2. Service can be instantiated with project ID
+  3. Basic validation registry pattern implemented
+  4. Configuration loading from JSON/YAML files works
+- **Devon Instructions**:
+  - Create `backend/src/services/IntegrationReadinessService.js`
+  - Implement core class with `validate(subtaskId)` method
+  - Create configuration loader for validation profiles
+- **Tara Instructions**:
+  - Write unit tests for service instantiation and configuration loading
+  - Test validation registry with mock validators
+- **Estimated Steps**: 2-3 (core class + configuration)
+
+#### Subtask 2-10-2: Database Validator Implementation
+- **Description**: Implement `DatabaseValidator` that checks database schema, migrations, and data consistency.
+- **Dependencies**: 2-10-1 (Core service), 2-1-5 (DatabaseTool methods)
+- **Acceptance Criteria**:
+  1. `DatabaseValidator` class exists with `run(check)` method
+  2. Validates: columns exist, migrations applied, foreign key integrity
+  3. Returns structured results with success/failure and remediation steps
+  4. Uses DatabaseTool for database operations
+- **Devon Instructions**:
+  - Create `backend/src/services/validators/DatabaseValidator.js`
+  - Implement validation checks using DatabaseTool
+  - Add remediation suggestions for common failures
+- **Tara Instructions**:
+  - Write integration tests with real database
+  - Test column existence validation
+  - Test migration version checking
+- **Estimated Steps**: 2-3 (validator + integration)
+
+#### Subtask 2-10-3: Filesystem Validator Implementation
+- **Description**: Implement `FilesystemValidator` that checks file/directory existence, permissions, and content.
+- **Dependencies**: 2-10-1 (Core service), 2-2-2 (ContextBuilder uses FileSystemTool)
+- **Acceptance Criteria**:
+  1. `FilesystemValidator` class exists with `run(check)` method
+  2. Validates: paths exist, permissions, file headers/signatures
+  3. Returns structured results with success/failure
+  4. Uses FileSystemTool for file operations
+- **Devon Instructions**:
+  - Create `backend/src/services/validators/FilesystemValidator.js`
+  - Implement validation checks using FileSystemTool
+  - Add permission checking (read/write/execute)
+- **Tara Instructions**:
+  - Write integration tests with mock filesystem
+  - Test path existence validation
+  - Test permission validation
+- **Estimated Steps**: 2-3 (validator + integration)
+
+#### Subtask 2-10-4: External Service Validator Implementation
+- **Description**: Implement `ExternalServiceValidator` for service health checks and version compatibility.
+- **Dependencies**: 2-10-1 (Core service)
+- **Acceptance Criteria**:
+  1. `ExternalServiceValidator` class exists with `run(check)` method
+  2. Validates: service health, version compatibility, authentication
+  3. Returns structured results with success/failure
+  4. Configurable timeouts and retries
+- **Devon Instructions**:
+  - Create `backend/src/services/validators/ExternalServiceValidator.js`
+  - Implement health checks for PostgreSQL, Redis, etc.
+  - Add version compatibility checking
+- **Tara Instructions**:
+  - Write integration tests with mock services
+  - Test service health validation
+  - Test version compatibility checking
+- **Estimated Steps**: 2-3 (validator + integration)
+
+#### Subtask 2-10-5: Validation Profile System
+- **Description**: Create YAML/JSON-based validation profiles for different subtask types.
+- **Dependencies**: 2-10-1 (Core service)
+- **Acceptance Criteria**:
+  1. Validation profile system loads from `.Docs/validation_profiles/`
+  2. Different profiles for database, filesystem, service subtasks
+  3. Profile inheritance and composition supported
+  4. Auto-generated profiles for existing subtasks
+- **Devon Instructions**:
+  - Create profile directory structure
+  - Implement profile loader with inheritance
+  - Create profiles for existing subtask types
+  - Add profile validation (schema validation)
+- **Tara Instructions**:
+  - Write tests for profile loading and inheritance
+  - Test profile validation
+  - Verify auto-generation for existing subtasks
+- **Estimated Steps**: 2-3 (profile system + generation)
+
+#### Subtask 2-10-6: StepDecomposer Integration
+- **Description**: Integrate IntegrationReadinessService with StepDecomposer for automatic validation before step creation.
+- **Dependencies**: 2-10-1 (Core service), 2-2-1 (StepDecomposer)
+- **Acceptance Criteria**:
+  1. StepDecomposer validates integration readiness before creating steps
+  2. `IntegrationNotReadyError` thrown with remediation details
+  3. Validation results stored in trace events
+  4. Orion receives clear error messages with remediation steps
+- **Devon Instructions**:
+  - Update `StepDecomposer.js` to call IntegrationReadinessService
+  - Create `IntegrationNotReadyError` class
+  - Store validation results in trace events
+  - Format remediation for Orion consumption
+- **Tara Instructions**:
+  - Write integration tests for validation failure scenarios
+  - Test error propagation to Orion
+  - Verify trace event storage
+- **Estimated Steps**: 2 (integration + error handling)
+
+#### Subtask 2-10-7: Task Orchestrator Integration
+- **Description**: Integrate with TaskOrchestrator for proactive validation in Orion's workflow.
+- **Dependencies**: 2-10-1 (Core service), existing TaskOrchestrator
+- **Acceptance Criteria**:
+  1. TaskOrchestrator validates integration readiness before subtask execution
+  2. Orion receives proactive warnings about integration issues
+  3. Smart subtask sequencing based on dependency readiness
+  4. Remediation skills can be executed to fix issues
+- **Devon Instructions**:
+  - Update `TaskOrchestrator.js` (or equivalent) to call IntegrationReadinessService
+  - Implement proactive validation in Orion's main loop
+  - Add smart sequencing based on validation results
+  - Integrate with Skill Framework for remediation
+- **Tara Instructions**:
+  - Write end-to-end tests for proactive validation
+  - Test smart sequencing logic
+  - Verify remediation skill integration
+- **Estimated Steps**: 3-4 (orchestrator integration + skills)
+
+#### Subtask 2-10-8: Update Existing Subtask Definitions
+- **Description**: Update all existing Feature 2 subtasks to include integration validation steps.
+- **Dependencies**: 2-10-5 (Validation profiles)
+- **Acceptance Criteria**:
+  1. All Feature 2 subtasks (2-1-1 through 2-9-x) updated with integration requirements
+  2. Integration validation steps added to subtask lifecycles
+  3. Documentation updated to reflect new workflow
+  4. Backward compatibility maintained for existing tests
+- **Devon Instructions**:
+  - Update Feature2_Skills_Aider_Integration_v5.md
+  - Add integration requirements to each subtask
+  - Update subtask lifecycle diagrams
+  - Create validation profiles for each subtask type
+- **Tara Instructions**:
+  - Verify all subtasks have integration requirements
+  - Test backward compatibility of existing tests
+  - Validate documentation clarity
+- **Estimated Steps**: 2 (documentation updates + validation profiles)
+
+#### Subtask 2-10-9: Performance Optimization & Caching
+- **Description**: Implement caching and optimization to keep validation overhead minimal.
+- **Dependencies**: 2-10-1 through 2-10-6
+- **Acceptance Criteria**:
+  1. Validation results cached with TTL (5 minutes)
+  2. Parallel validation for independent checks
+  3. Validation time <2 seconds for typical subtasks
+  4. Cache invalidation on state changes (git commits, migrations)
+- **Devon Instructions**:
+  - Implement caching layer in IntegrationReadinessService
+  - Add parallel validation using Promise.all
+  - Add cache invalidation triggers
+  - Optimize database queries for validation
+- **Tara Instructions**:
+  - Write performance tests
+  - Test cache hit/miss behavior
+  - Verify parallel validation correctness
+- **Estimated Steps**: 2-3 (caching + optimization)
+
+#### Subtask 2-10-10: E2E Testing & Validation
+- **Description**: Comprehensive end-to-end testing of the entire integration readiness workflow.
+- **Dependencies**: 2-10-1 through 2-10-9
+- **Acceptance Criteria**:
+  1. E2E tests cover all validation scenarios
+  2. False positive rate <5% in simulated environments
+  3. Remediation success >80% in automated tests
+  4. Developer workflow improvements demonstrated
+- **Devon Instructions**:
+  - Create E2E test suite in `backend/tests/e2e/integration_readiness.spec.js`
+  - Simulate integration failure scenarios
+  - Test automatic remediation flows
+  - Measure performance and accuracy metrics
+- **Tara Instructions**:
+  - Run E2E test suite
+  - Verify false positive rate
+  - Test remediation success rate
+  - Validate developer experience improvements
+- **Estimated Steps**: 2-3 (E2E tests + metrics)
 
 ## Success Metrics
 1. **Step Completion Rate:** >80% of steps completed without manual intervention

@@ -1339,7 +1339,7 @@ class DatabaseTool {
           file_path,
           instructions,
           'pending', // default status
-          context_files,
+          JSON.stringify(context_files),
           0, // default attempt_count
           null, // default last_error
           parent_step_id

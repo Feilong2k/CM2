@@ -15,6 +15,7 @@ class ToolOrchestrator {
      * @param {string} options.requestId - Request ID for tracing (auto-generated if not provided)
      * @param {Object} options.traceStoreService - Service for persisting trace events (required for persistence)
      * @param {Object} options.messageStoreService - Service for persisting chat messages (optional)
+     * @param {Object} options.toolResultCache - Instance of ToolResultCacheService for caching tool results (optional)
      */
     constructor(adapter, toolRegistry, options = {}) {
         this.adapter = adapter;
@@ -25,6 +26,7 @@ class ToolOrchestrator {
         this.requestId = options.requestId || crypto.randomUUID();
         this.traceStoreService = options.traceStoreService || null;
         this.messageStoreService = options.messageStoreService || null;
+        this.toolResultCache = options.toolResultCache || null;
     }
 
     /**
@@ -186,15 +188,25 @@ class ToolOrchestrator {
                         turnIndex: this.currentTurn
                     };
 
-                    // Execute the tool call
+                    // Execute the tool call, using cache if available and applicable
+                    let result;
                     try {
-                        const results = await executeToolCalls(
-                            this.toolRegistry,
-                            [toolCall],
-                            context
-                        );
-
-                        const result = results[0]; // Single tool call
+                        if (this.toolResultCache && this._isCacheableTool(toolCall)) {
+                            // Use cache service
+                            result = await this.toolResultCache.executeWithCache(
+                                this.toolRegistry,
+                                toolCall,
+                                context
+                            );
+                        } else {
+                            // Fall back to direct execution
+                            const results = await executeToolCalls(
+                                this.toolRegistry,
+                                [toolCall],
+                                context
+                            );
+                            result = results[0]; // Single tool call
+                        }
                         
                         // Yield tool_result event
                         const toolResultEvent = {
@@ -454,6 +466,20 @@ class ToolOrchestrator {
         }
         
         return merged;
+    }
+
+    /**
+     * Check if a tool call is cacheable.
+     * Currently caches FileSystemTool and DatabaseTool operations.
+     * @param {Object} toolCall - The tool call object
+     * @returns {boolean} True if the tool is cacheable
+     */
+    _isCacheableTool(toolCall) {
+        const toolName = toolCall.function?.name || '';
+        // Cache only context-building tools that are read-heavy and idempotent
+        return toolName.startsWith('FileSystemTool_') || 
+               toolName.startsWith('DatabaseTool_') ||
+               toolName.startsWith('search_files');
     }
 
     /**
